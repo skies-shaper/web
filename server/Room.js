@@ -7,7 +7,7 @@ export default class Room {
     #description; get description() { return this.#description; }
 
     #connections = {};
-    get n_connections() { return this.#connections.length; }
+    get n_connections() { return Object.keys(this.#connections).length; }
 
     #server;
     #socketRoom;
@@ -19,7 +19,7 @@ export default class Room {
 
         this.#server = server;
 
-        this.#socketRoom = server.io.to(this.id)
+        this.#socketRoom = server.io.to(this.id);
 
         this.#createEmptyTimeout();
     }
@@ -34,17 +34,27 @@ export default class Room {
     }
 
     addPlayer(socket) {
-        this.#connections[socket.id] = new Connection(this, socket);
+        if (this.n_connections === 10) return { err: 'ROOM_FULL' } ;
 
+        console.info({ "USER JOINED ROOM": { id: socket.id, room: this.#id } });
+
+        this.#connections[socket.id] = new Connection(this, socket);
+        socket.join(this.#id);
         clearTimeout(this.#emptyTimeout);
+
+        return {};
     }
 
     removePlayer(id) {
+        if (!this.#connections.hasOwn(id))
+            return console.error({ 'ATTEMPTED TO REMOVE NONEXISTENT CONNECTION': { id, room: this.#id } });
+
+        this.#connections[id].socket.leave(this.#id);
         this.#connections[id].destroy();
 
         delete this.#connections[id];
 
-        if (this.#connections.length == 0)
+        if (this.n_connections === 0)
             this.#createEmptyTimeout();
     }
 

@@ -6,8 +6,6 @@ export default class Connection {
     get id() { return this.#socket.id; }
     
     constructor(room, socket) {
-        console.info({ "USER JOINED ROOM": { id: socket.id, room: room.id } });
-
         this.#room = room;
         this.#socket = socket;
 
@@ -17,7 +15,7 @@ export default class Connection {
 
     #handleSocket = () => {
         this.#socket.on("disconnect", reason => {
-            console.info({ "USER LEFT ROOM": { id: this.id } });
+            console.info({ "USER DISCONNECTED": { id: this.id } });
             this.#room.removePlayer(this.id);
         });
     }
