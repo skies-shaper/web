@@ -1,4 +1,4 @@
-export const socket = io();
+// export const socket = io();
 export const TIMEOUT_MS = 5000;
 
 export async function emitWithTimeoutAck(...args) {
@@ -11,6 +11,12 @@ export async function emitWithTimeoutAck(...args) {
 
     return res;
 }
+
+export async function init_networkstuff() {
+
+}
+
+export async function set_server_avatarID(id) { }
 
 //returns true if is host, false otherwise (do JS modules respect inheritance hierarchies??? maybe idk anyways this function is here also)
 export function isHost() {
@@ -28,13 +34,16 @@ export async function JoinRoomResult(id) {
     return emitWithTimeoutAck('join-room', id);
 }
 
-// returns a list of the people in a room: ["username1", "username2"]
+// returns a list of the people in a room: [{"name": "oogabooga", avatar: 0}, ...]. The room's host should be at index 0 and the rest should be in order of joining (i.e. if player3 leaves, then player4 and player5 would take indices 2 and 3 from 3 and 4)
 export async function GetRoomPeopleList() {
 
 }
 
 // submits name for consideration, returns true if it's unique, false otherwise
-export async function isNameUnique() {
+export async function isNameUnique(name) {
+    return true
+}
+export async function set_name() { // we let multiple people have the same name. chaos ensues.
 
 }
 
@@ -62,7 +71,12 @@ export async function get_round_guess_options() {
 
 }
 
-// sends player's guess as the `num`th element in the provided array (0, 1, 2)
+// sends player's guess as num (the `num`th element in the provided array (0, 1, 2))
 export async function guess(num) {
+
+}
+
+// starts the game in the host's room
+export async function beginGame() {
 
 }

@@ -1,20 +1,21 @@
-import * as Network from "./networking.js"
 
+import * as Network from "./networking.js"
+import { addButton, addTextButton, drawImage, drawText, centerText, fillRect, setFont } from "./renderfuns.js"
 /*
 BASE SCALE: 800x450
 */
-const gameScreenCvs = document.getElementById("gamescreen")
-const canvas = gameScreenCvs.getContext("2d")
+export const gameScreenCvs = document.getElementById("gamescreen")
+export const canvas = gameScreenCvs.getContext("2d")
 
-let buttonEvents = []
-let buttonignoresignals = {}
-let gameConsts = {
+export let buttonEvents = []
+export let buttonignoresignals = {}
+export let gameConsts = {
     width: 800,
     height: 450,
     scale: 1
 }
-let mouseX = 400
-let mouseY = 400
+export let mouseX = 400
+export let mouseY = 400
 const HOWLER_POS_SCALE = 0.01
 
 const publicPath = filename => window.location.pathname + "public/" + filename;
@@ -38,25 +39,31 @@ setInterval(() => {
     _gameLoop()
 
 }, (1000 / 60))
-countTPS()
+
+
+
 
 gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseX = event.offsetX / gameConsts.scale * window.devicePixelRatio
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
 })
 
-var game_states = [
-    mainmenu,
-    joinscreen,
-    hostscreen,
-    findscreen,
-    LIESscreen,
-]
+var game_states = {
+    0: mainmenu, //
+    1: joinscreen,
+    2: hostscreen,
+    3: findscreen,
+    4: loadingscreen, // screen for loading; create a POST_LOAD variable and a LOAD_TEXT variable to store what it says and what happens next
+    5: aboutscreen, // screen that shows the about stuff
+    6: lyingscreen,
+}
 var game_state = 0
 
 function _gameLoop() {
     canvas.fillStyle = "black"
     fillRect(0, 0, 1000, 1000)
+
+    handleTextInput()
     game_states[game_state]()
     // console.log(mouseX + "::" + mouseY)
 }
@@ -65,7 +72,6 @@ var textinput_str = ""
 var curr_textinput = 0
 
 var server_join_res = null;
-var errormsg = null;
 
 async function handleHashChange() {
     if (window.location.hash.length != 6) return; // hashtag + 5 char room id 
@@ -77,6 +83,7 @@ async function handleHashChange() {
 
 window.addEventListener("hashchange", e => handleHashChange());
 handleHashChange();
+var errormsg = ""
 
 function mainmenu() {
     canvas.fillStyle = "white"
@@ -105,6 +112,8 @@ function mainmenu() {
             }[server_join_res.err]
         } else {
             game_state = 1
+            // room_ID = server_join_res.room_ID
+            room_ID = "ABCDE"
         }
     }
     if (!isJoinBtnClicked) {
@@ -129,14 +138,17 @@ function mainmenu() {
         }
 
         canvas.fillStyle = "white"
-        handleTextInput()
     }
     // centerText("· Join ·", 290)
     // 355, 300 > 450, 330
-    addTextButton("Find", -100, 320, () => {
-        console.log("Going to Find Server Screen")
-        game_state = 3
-    })
+    // addTextButton("Find", -100, 320, () => {
+    //     console.log("Going to Find Server Screen")
+    //     game_state = 3
+    // })
+    canvas.fillStyle = "grey"
+    centerText("· Find ·", 320)
+    canvas.fillStyle = "white"
+
     // 355, 330 > 450, 360
     addTextButton("Host", -100, 350, async () => {
         console.log("Going to Host Server Screen")
@@ -144,18 +156,109 @@ function mainmenu() {
 
         res = await Network.create_room()
 
-        if (res.err) {}
+        if (res.err) { }
         room_ID = res.roomId;
 
         // join room
         window.location.hash = room_ID;
     })
+    addTextButton("About", -100, 415, async () => {
+        console.log("Going to About Screen")
+        game_state = 5
+    })
 }
 
-function joinscreen() {
+var editing_name = false;
+var name = "player123456890"
+var prevname = ""
+let avatars = [
+    { "name": "bob", "src": "" },
+    { "name": "jooooooooooooooooe", "src": "" }
+]
+let player_avatar = 0
+let players_list = [{ name: "a", avatar: 0 }, { name: "b", avatar: 0 }, { name: "c", avatar: 0 }, { name: "d", avatar: 0 }, { name: "e", avatar: 0 }, { name: "f", avatar: 0 }]
+async function joinscreen() {
 
+    var js_leftmargin = 25
+    if (/*it's been like .5 seconds*/false)
+        players_list = Network.GetRoomPeopleList()
+
+    canvas.fillStyle = "white"
+    // ability to set name (textbox)
+    // list of currently joined players (and if they're the host)
+    // note list of returned players must always have the host at index 0.
+    setFont("40px")
+    drawText(players_list[0].name + "'s Room -- code " + room_ID, js_leftmargin, 40)
+    setFont("20px")
+    drawText(players_list.length + "/ 10 players", js_leftmargin, 60)
+
+    setFont("30px")
+    for (let i = 0; i < players_list.length; i++) {
+        drawText(players_list[i].name + ((i == 0) ? " (Host)" : ""), js_leftmargin + 30, 90 + (i * 34))
+    }
+
+    fillRect(399, 50, 2, 385)
+    // customization things
+
+    if (!editing_name)
+        drawText(name, 430, 90)
+    else
+        drawText(textinput_str, 430, 90)
+    addTextButton((editing_name ? "Submit" : "Edit"), ((editing_name) ? (canvas.measureText(textinput_str).width / gameConsts.scale) + 430 + 20 : (canvas.measureText(name).width / gameConsts.scale) + 430 + 20), 90, async () => {
+        if (!editing_name) {
+            typed = []
+            prevname = name
+            curr_textinput = 1
+        }
+        if (editing_name) {
+            if (name == "") {
+                name = prevname
+            } else {
+                Network.set_name(name)
+                name = textinput_str
+            }
+        }
+        editing_name = !editing_name
+    })
+
+    // draw avatar images in a like circle frame etc up here once complete. probably store all in a specific folder that is auto-filled 
+
+    let tText = "Avatar: " + avatars[player_avatar].name
+    drawText(tText, 600 - (canvas.measureText(tText).width / gameConsts.scale / 2), 300)
+    addTextButton("prev", 430, 325, () => {
+        // increment player's stored avatar ID by 1 % avatars.length
+        player_avatar++
+        player_avatar %= avatars.length
+        Network.set_server_avatarID(player_avatar)
+    })
+    addTextButton("next", 700, 325, () => {
+        player_avatar--
+        player_avatar += avatars.length
+        player_avatar %= avatars.length
+        Network.set_server_avatarID(player_avatar)
+        // decrement player's stored avatar ID by 1 % avatars.length
+    })
+
+    // name editor
+    // name starts out "player+socket id"
+    //  -> on submit, send to server name
+    // avatar editor
+    // increment avatar ID + 1 mod total number avatar IDs
+    // 
+
+
+
+    // if host, a "begin game" button
+    setFont("40px")
+    if (is_host) {
+        addTextButton("Begin Game", js_leftmargin, 435, () => {
+            Network.beginGame()
+        })
+    }
 }
+
 var room_ID = ""
+var is_host = false
 function hostscreen() {
     canvas.fillStyle = "white"
     setFont("20px")
@@ -168,32 +271,82 @@ function hostscreen() {
     }
 
     setFont("60px")
-    addTextButton("Begin game", -100, 300)
+    addTextButton("Begin game", -100, 300, () => {
+        game_state = 1
+        is_host = true
+    })
 }
-function findscreen() { }
-function LIESscreen() { }
+function loadingscreen() { }
+function aboutscreen() {
+    canvas.fillStyle = "white"
+    setFont("50px")
+    centerText("Web of Lies", 40)
+    setFont("30px")
+    centerText("Programming and Layout - SkiesShaper", 70)
+    centerText("Backend - Me123jm", 100)
+    centerText("Writing - Landalt", 130)
+    centerText("Art - MarieMelody", 160)
 
+    addTextButton("Back", -100, 415, async () => {
+        console.log("Going to main menu")
+        game_state = 0
+    })
+
+}
+function lyingscreen() { }
+function findscreen() { }
 var typed = []
 window.addEventListener("keyup", (e) => {
-    if (curr_textinput == 0 && e.key.match(/((backspace)|[ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz23456789])/i))
+    if (curr_textinput == 0 && e.key.match(/((backspace)|[ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz23456789])/))
         typed.push(e.key)
-
+    if (curr_textinput == 1 && e.key.match(/((backspace)|[A-z0-9\ ])/)) {
+        if (e.shiftKey)
+            typed.push(e.key.toUpperCase())
+        else
+            typed.push(e.key)
+    }
 })
 // textareas: 
 // -- lying type in
 // -- enter join code
-function handleTextInput() {
+// -- writing name
+async function handleTextInput() {
     if (isJoinBtnClicked && game_state == 0) {
+
         curr_textinput = 0
         if (typed[typed.length - 1] == "Backspace") {
             typed.pop()
             typed.pop()
         }
-        if (typed.length > 5) {
+        if ((typed.length > 0) && typed[typed.length - 1] == "Enter") {
+            server_join_res = await Network.JoinRoomResult(typed.join(""))
+        }
+        if ((typed.length > 0) && (typed.length > 5 || typed[typed.length - 1].length > 1)) {
             typed.pop()
         }
         // console.log(typed)
         textinput_str = typed.join(" ").padEnd(10, " _").toUpperCase()
+    }
+    if (editing_name && game_state == 1) {
+        curr_textinput = 1
+        if (typed[typed.length - 1] == "Backspace") {
+            typed.pop()
+            typed.pop()
+        }
+        if (typed[typed.length - 1] == "Enter") {
+            if (name == "") {
+                name = prevname
+            } else {
+                Network.set_name(name)
+                name = textinput_str
+            }
+            editing_name = false
+        }
+        if ((canvas.measureText(typed.join("")).width / gameConsts.scale) > 300 || (typed.length > 0 && typed[typed.length - 1].length > 1)) {
+            typed.pop()
+        }
+        // console.log(typed)
+        textinput_str = typed.join("")
     }
 }
 
@@ -225,114 +378,7 @@ function renderObjects(dt) {
 
 }
 // if x==-100, centered
-function addTextButton(text, xpos, ypos, callback) {
-    let fulltext = "· " + text + " ·"
-    let addonwidth = canvas.measureText("<").width
-    let w = canvas.measureText(fulltext).width / gameConsts.scale
-    let h = canvas.font.substring(0, canvas.font.indexOf("px")) / gameConsts.scale
-    // console.log(h)
-    let y = ypos
-    let x = xpos
-    let id = "btn:" + text
-    if (xpos == -100) {
-        // console.log("centered!")
-        x = ((800 - (canvas.measureText(fulltext).width / gameConsts.scale)) / 2)
-    }
-    if (buttonEvents.indexOf(id) == -1) {
-        buttonignoresignals[id] = false
-        buttonEvents.push(id)
-        gameScreenCvs.addEventListener("mouseup", () => {
-            if (buttonignoresignals[id]) {
-                buttonignoresignals[id] = false
-                return
-            }
-            if (mouseInArea(x, y - h, (x + w), (y))) {
-                callback()
-            }
-            buttonEvents.splice(buttonEvents.indexOf(id), 1)
 
-        }, { once: true })
-    }
-    if (mouseInArea(x, y - h, (x + w), (y))) {
-        fulltext = "·> " + text + " <·"
-        drawText(fulltext, x - (.5 * addonwidth), y)
-    } else {
-        drawText(fulltext, x, y)
-
-    }
-    // console.log(fulltext + "::" + x + "::" + y)
-}
-
-function addButton(id, src, x, y, w, h, callback, options) {
-
-    if (buttonEvents.indexOf(id) == -1) {
-        buttonignoresignals[id] = false
-
-        buttonEvents.push(id)
-        gameScreenCvs.addEventListener("mouseup", () => {
-            if (buttonignoresignals[id]) {
-                buttonignoresignals[id] = false
-                return
-            }
-            if (mouseInArea(x, y, (x + w), (y + h))) {
-                callback()
-            }
-            buttonEvents.splice(buttonEvents.indexOf(id), 1)
-
-        }, { once: true })
-
-    }
-
-    if (mouseInArea(x, y, (x + w), (y + h))) {
-        canvas.filter = "brightness(140%)"
-    }
-
-    drawImage(x, y, w, h, src)
-
-    canvas.filter = "none"
-}
-
-function mouseInArea(sX, sY, eX, eY) {
-    return (mouseX > sX && mouseX < eX && mouseY > sY && mouseY < eY)
-}
-
-function fillRect(x, y, w, h) {
-    canvas.fillRect(x * gameConsts.scale, y * gameConsts.scale, w * gameConsts.scale, h * gameConsts.scale)
-}
-
-function setFont(font) {
-    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Glass"
-}
-
-function drawText(str, x, y, maxWidth) {
-    if (typeof maxWidth == 'undefined') {
-        canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale)
-    }
-    canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale, maxWidth * gameConsts.scale)
-}
-
-function centerText(str, y) {
-    canvas.fillText(str, ((800 - (canvas.measureText(str).width / gameConsts.scale)) / 2) * gameConsts.scale, y * gameConsts.scale)
-}
-
-var imgs = {}
-function drawImage(x, y, w, h, src) {
-    if (typeof src === "undefined") {
-        return
-    }
-    try {
-        if (!imgs[src]) {
-            imgs[src] = new Image()
-            imgs[src].src = "../public/img/" + src
-            console.log(imgs[src])
-        }
-        canvas.drawImage(imgs[src], Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
-    }
-    catch (e) {
-        console.log("Image source not found: " + src)
-    }
-    return;
-}
 
 function applyVignette() {
     // radial gradient centered at canvas center
