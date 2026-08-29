@@ -45,7 +45,10 @@ export async function start_game() {
 
 }
 
-// returns a list of 2 facts from the player's assigned slot in the fact list ["Alex is cool", "Cheese is tasty"]
+// returns an object containing:
+// {topic: "topic-name", factList: [...]}
+//  factList:  of 2 facts from the player's assigned slot in the fact list ["Alex is cool", "Cheese is tasty"]
+
 export async function get_list_of_facts() {
 
 }

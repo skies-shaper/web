@@ -12,7 +12,7 @@ export function addTextButton(text, xpos, ypos, callback) {
     // console.log(h)
     let y = ypos
     let x = xpos
-    let id = "btn:" + text
+    let id = "btn:" + text + "::" + ypos + "::" + xpos
     if (xpos == -100) {
         // console.log("centered!")
         x = ((800 - (canvas.measureText(fulltext).width / gameConsts.scale)) / 2)

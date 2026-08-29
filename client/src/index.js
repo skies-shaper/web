@@ -20,17 +20,10 @@ const HOWLER_POS_SCALE = 0.01
 
 const publicPath = filename => window.location.pathname + "public/" + filename;
 
-
+let res
 const TPS = 30
 const TIME_PER_TICK = 1000 / TPS
-const MAX_TIME_BT_TICKS = TIME_PER_TICK * 2 - 3;
-
-let time = 0;
-let _stopGameLoop = false;
-let _realTPSCounter = 0;
-let realTPS = 0;
-let totalTicks = 0;
-let animationTicks = 0
+let ticks = 0
 // // setFont("20px Lacquer")
 // console.log(canvas.measureText("Cover up all of the ").width / gameConsts.scale)
 
@@ -56,8 +49,9 @@ var game_states = {
     4: loadingscreen, // screen for loading; create a POST_LOAD variable and a LOAD_TEXT variable to store what it says and what happens next
     5: aboutscreen, // screen that shows the about stuff
     6: lyingscreen,
+    7: guessscreen
 }
-var game_state = 0
+var game_state = 7
 
 function _gameLoop() {
     canvas.fillStyle = "black"
@@ -65,6 +59,7 @@ function _gameLoop() {
 
     handleTextInput()
     game_states[game_state]()
+    ticks++
     // console.log(mouseX + "::" + mouseY)
 }
 var isJoinBtnClicked = false
@@ -254,6 +249,8 @@ async function joinscreen() {
     if (is_host) {
         addTextButton("Begin Game", js_leftmargin, 435, () => {
             Network.beginGame()
+            loadingscreenSubText = "Joining Game"
+            game_state = 4
         })
     }
 }
@@ -277,7 +274,17 @@ function hostscreen() {
         is_host = true
     })
 }
-function loadingscreen() { }
+var loadingscreen_next = 0
+let loadingscreenMainText = "Loading"
+let loadingscreenSubText = ""
+function loadingscreen() {
+    canvas.fillStyle = "white"
+    setFont("90px")
+    centerText(loadingscreenMainText.padEnd(loadingscreenMainText.length + (Math.floor(ticks / 30) % 4), "."), 225)
+    setFont("40px")
+    centerText(loadingscreenSubText, 260)
+}
+
 function aboutscreen() {
     canvas.fillStyle = "white"
     setFont("50px")
@@ -294,15 +301,74 @@ function aboutscreen() {
     })
 
 }
-function lyingscreen() { }
+var topicdata = { topic: "cheese", factList: ["mmm tasty", "contains salt sometimes"] } // WILL BE POPULATED before lyingscreen is called
+var numsubmittedresponses = 0
+function lyingscreen() {
+
+    curr_textinput = 2
+    canvas.fillStyle = "white"
+    drawImage(800 - 80, 0, 80, 80, "spiderweb-right.png")
+    setFont("70px")
+    drawText("Your topic is " + topicdata.topic + ".", 25, 65)
+
+    setFont("40px")
+    drawText("Here are some true facts:", 25, 100)
+    setFont("20px")
+    for (let i = 0; i < topicdata.factList.length; i++) {
+        drawText("· " + topicdata.factList[i], 25, 120 + i * 20)
+    }
+    setFont("30px")
+    centerText("Now write a magnificent mendacity about " + topicdata.topic + "!", 200)
+    setFont("20px")
+    drawText(textinput_str, 25, 230)
+
+    addTextButton("submit", 25, 300, () => {
+        Network.submit_lie(textinput_str)
+    })
+    drawText(numsubmittedresponses + "/" + players_list.length + " responses received", 100, 300)
+}
+var guess_options = ["cheese is awesome", "cheese is cool", "cheese tastes good", "cheesesesesese", "OBVIOUSLY UNTRUE"] // to be filled in the loading screen!
+var guess_choice = 0
+var time_remaining = 30
+function guessscreen() {
+    canvas.fillStyle = "white"
+    canvas.fillStyle = "white"
+    drawImage(800 - 80, 0, 80, 80, "spiderweb-right.png")
+    setFont("70px")
+    drawText("Your topic is " + topicdata.topic + ".", 25, 65)
+
+    setFont("40px")
+    drawText("Before you are some true facts.", 25, 100)
+    drawText("But one is not. Choose the Lie.", 25, 130)
+    setFont("20px")
+    for (let i = 0; i < guess_options.length; i++) {
+        addTextButton("The Lie", 25, 155 + i * 20, () => {
+            guess_choice = i
+            console.log(i)
+        })
+        drawText("· " + guess_options[i], 100, 155 + i * 20)
+    }
+
+
+    drawText("Your choice:", 25, 300)
+    drawText("\"" + guess_options[guess_choice] + "\" is the lie", 25, 320)
+    drawText(numsubmittedresponses + "/" + players_list.length + " responses received. " + time_remaining + " seconds left", 25, 350)
+}
+
 function findscreen() { }
 var typed = []
-window.addEventListener("keyup", (e) => {
+window.addEventListener("keydown", (e) => {
     if (curr_textinput == 0 && e.key.match(/((backspace)|[ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz23456789])/))
         typed.push(e.key)
-    if (curr_textinput == 1 && e.key.match(/((backspace)|[A-z0-9\ ])/)) {
+    if ((curr_textinput == 1) && e.key.match(/((backspace)|[A-Za-z0-9 ])/)) {
         if (e.shiftKey)
             typed.push(e.key.toUpperCase())
+        else
+            typed.push(e.key)
+    }
+    if ((curr_textinput == 2) && e.key.match(/((backspace)|[A-Za-z0-9\ ])/)) {
+        if (e.shiftKey)
+            typed.push(e.key.toLowerCase())
         else
             typed.push(e.key)
     }
@@ -349,10 +415,28 @@ async function handleTextInput() {
         // console.log(typed)
         textinput_str = typed.join("")
     }
+    if (game_state == 6) {
+        if (typed[typed.length - 1] == "Backspace") {
+            typed.pop()
+            typed.pop()
+        }
+        if (typed[typed.length - 1] == "Enter") {
+            if (name == "") {
+                name = prevname
+            } else {
+                Network.set_name(name)
+                name = textinput_str
+            }
+            editing_name = false
+        }
+        if ((canvas.measureText(typed.join("")).width / gameConsts.scale) > 700 || (typed.length > 0 && typed[typed.length - 1].length > 1)) {
+            typed.pop()
+        }
+        textinput_str = typed.join("") + ((Math.floor(ticks / 30) % 2 == 0) ? "_" : "")
+    }
 }
 
 sizeCvs()
-//window.onresize = sizeCvs
 window.addEventListener('resize', sizeCvs)
 
 function sizeCvs() {
@@ -375,29 +459,3 @@ function sizeCvs() {
         gameScreenCvs.style.width = gameConsts.width + "px"
     }
 }
-function renderObjects(dt) {
-
-}
-// if x==-100, centered
-
-
-function applyVignette() {
-    // radial gradient centered at canvas center
-    var gradient = canvas.createRadialGradient(
-        400 * gameConsts.scale, 400 * gameConsts.scale, 0,  // Inner circle (center, radius 0)
-        400 * gameConsts.scale, 400 * gameConsts.scale, Math.max(800 * gameConsts.scale, 400 * gameConsts.scale) / 2
-        // Outer circle (center, radius half of max dimension)
-    );
-
-    // color stops for the gradient
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)'); // center: fully transparent
-
-    gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0)'); // inner area: fully transparent
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.7)'); // edges: semi-transparent dark color
-
-    // 4. Apply the gradient
-    canvas.fillStyle = gradient;
-    fillRect(0, 0, 800, 400);
-}
-
-export { fillRect, setFont, drawText, drawImage };
