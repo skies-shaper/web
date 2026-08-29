@@ -1,18 +1,20 @@
 
 
 export default class Connection {
-    #socket; get socket() { return this.#socket; }
-    #username; get username() { return this.#username; }
-
     #room;
 
+    #socket; get socket() { return this.#socket; }
     get id() { return this.#socket.id; }
+
+    #username; get username() { return this.#username; }
+    #avatar; get avatar() { return this.#avatar; }
     
     constructor(room, socket) {
         this.#room = room;
         this.#socket = socket;
 
         this.#username = room.generateUsername();
+        this.#avatar = 0 // Math.floor(Math.random() * 10)
 
         // add event listeners
         this.#handleSocket();

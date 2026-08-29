@@ -85,9 +85,10 @@ export default class Room {
     emitPlayersList() {
         this.#socketRoom.emit('players-list', { 
             players: Object.values(this.#connections).map(conn => ({ 
+                id: conn.socket.id,
                 username: conn.username,
                 isHost: conn.socket.id === this.#host,
-                avatar: 0
+                avatar: conn.avatar
             })) 
         });
     }
