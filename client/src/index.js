@@ -141,7 +141,14 @@ function mainmenu() {
     addTextButton("Host", -100, 350, async () => {
         console.log("Going to Host Server Screen")
         game_state = 2
-        room_ID = await Network.create_room()
+
+        res = await Network.create_room()
+
+        if (res.err) {}
+        room_ID = res.roomId;
+
+        // join room
+        window.location.hash = room_ID;
     })
 }
 

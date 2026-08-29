@@ -12,16 +12,13 @@ export async function emitWithTimeoutAck(...args) {
     return res;
 }
 
-export async function init_networkstuff() {
-
-}
 //returns true if is host, false otherwise (do JS modules respect inheritance hierarchies??? maybe idk anyways this function is here also)
 export function isHost() {
     return true
 }
 // creates room. Returns room ID for display purposes
-export async function create_room() {
-    return "ABCDE"
+export async function create_room(description) {
+    return emitWithTimeoutAck('create-room', description);
 }
 // Makes request to server with given room ID
 // If not valid: return 0

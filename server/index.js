@@ -36,8 +36,6 @@ class Server {
             this.#handleSocket(socket);
         });
 
-        this.addAPIRoutes();
-
         this.#server.listen(this.PORT,this.HOSTNAME,() => {
             console.info({ "SERVER STARTED": { port: this.PORT, hostname: this.HOSTNAME } });
         });
@@ -47,9 +45,9 @@ class Server {
         this.#createRoom("Test Room", 'TEST9');
     }
 
-    addAPIRoutes() {
-        this.#app.get("/rooms", (req, res) => {
-            res.send({ 
+    #handleSocket(socket) {
+        this.#app.on("get-rooms", (callback) => {
+            callback({ 
                 rooms: Object.values(this.#rooms).map(room => ({ 
                     id: room.id, 
                     description: room.description, 
@@ -58,13 +56,10 @@ class Server {
             });
         })
 
-        this.#app.post("/create-room", (req, res) => {
-            const room = this.#createRoom(req.body.description ?? "");
-            res.send({ id: room.id });
+        socket.on("create-room", (description, callback) => {
+            callback(this.#createRoom(description ?? ""));
         })
-    }
 
-    #handleSocket(socket) {
         socket.on("join-room", (roomId, callback) => {
             roomId = roomId.toUpperCase();
 
@@ -99,7 +94,7 @@ class Server {
 
         this.#rooms[id] = room;
 
-        return room;
+        return { roomId: id };
     }
 
     deleteRoom(id) {
