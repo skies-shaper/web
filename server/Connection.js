@@ -1,5 +1,8 @@
+
+
 export default class Connection {
     #socket; get socket() { return this.#socket; }
+    #username; get username() { return this.#username; }
 
     #room;
 
@@ -8,6 +11,8 @@ export default class Connection {
     constructor(room, socket) {
         this.#room = room;
         this.#socket = socket;
+
+        this.#username = room.generateUsername();
 
         // add event listeners
         this.#handleSocket();
