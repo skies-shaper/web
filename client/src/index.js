@@ -1,21 +1,8 @@
-import { Vec } from "./utils.js"
-import { moveRectCollideMovingRect, rectRectOverlaps, rectCircleOverlaps } from "./collisions.js"
-
-import keyHandler from "./keyhandler.js"
+import * as Network from "./networking.js"
 
 /*
 BASE SCALE: 1600x900
 */
-
-keyHandler.setKeyBindings({
-    //"moveUp": ["KeyW", "ArrowUp"],
-    //"moveDown": ["KeyS", "ArrowDown"],
-    "moveLeft": ["KeyA", "ArrowLeft"],
-    "moveRight": ["KeyD", "ArrowRight"],
-    'jump': ['Space', 'ArrowUp', 'KeyW'],
-    'throwTape': ['MouseLeft'],
-    'reset': ["KeyR"]
-})
 const gameScreenCvs = document.getElementById("gamescreen")
 const canvas = gameScreenCvs.getContext("2d")
 
@@ -47,65 +34,6 @@ let animationTicks = 0
 // console.log(canvas.measureText("Cover up all of the ").width / gameConsts.scale)
 
 
-
-const COYOTE_TIME = 0.1
-const JUMP_BUFFER = 0.1
-
-const JUMP_VEL = 900
-
-const AIR_FRICTION = 0.98
-const GROUND_FRICTION = 0.999999
-
-const GRAVITY_ACCEL = 600
-const GRAVITY_DOWNWARDS_ACCEL = 600
-const GROUND_MOVE_ACCEL = 1300
-const AIR_MOVE_ACCEL = 200
-
-let player = {
-    direction: 1,
-    pos: { x: 300, y: 200 }, // CENTER
-    vel: { x: 0, y: 0 },
-    size: { x: 35, y: 55 },
-
-    jumpTime: 0, // stores coyote time
-    jumpBuffer: 0, // buffer that allows jumping if space was pressed early
-    numTapes: 0,
-    frame: 0,
-    maxFrames: 5,
-    frame: 0,
-    width: 35,
-    height: 55,
-    moveState: 0,
-    moveStates: {
-        idle: 0,
-        moving: 1,
-        slide: 2,
-        jump: 3,
-        swing: 4
-    },
-
-    grounded: false
-}
-
-keyHandler.onInputDown('jump', () => {
-    player.jumpBuffer = JUMP_BUFFER
-})
-
-keyHandler.onInputDown('throwTape', () => {
-    if (!tape.launched && inGameplay) {
-        if (player.numTapes == 0) {
-            return
-        }
-        player.numTapes--
-        tape.launched = true
-
-        tape.released = false
-        tapeRip.pos(tape.pos.x * HOWLER_POS_SCALE, tape.pos.y * HOWLER_POS_SCALE)
-        tapeRip.play()
-
-        tape.particles.push({ start: Vec.copy(player.pos), end: null })
-    }
-})
 setInterval(() => {
     _gameLoop()
 
@@ -119,11 +47,94 @@ gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
 })
 
+var game_states = [
+    mainmenu,
+    joinscreen,
+    hostscreen,
+    findscreen,
+    LIESscreen,
+]
+var game_state = 0
+
 function _gameLoop() {
-    canvas.fillStyle = "red"
-    console.log("hello!")
-    fillRect(0, 0, 400, 400)
+    canvas.fillStyle = "black"
+    fillRect(0, 0, 1000, 1000)
+    game_states[game_state]()
+    // console.log(mouseX + "::" + mouseY)
 }
+var isJoinBtnClicked = false
+var textinput_str = ""
+var curr_textinput = 0
+var server_join_req = -1
+function mainmenu() {
+    canvas.fillStyle = "white"
+    setFont("60px")
+    centerText("Web", 50)
+    centerText("Of", 100)
+    centerText("Lies", 150)
+    drawImage(0, 0, 80, 80, "spiderweb-left.png")
+    drawImage(800 - 80, 0, 80, 80, "spiderweb-right.png")
+
+    setFont("30px")
+    // 355,270 > 450,300
+    if (server_join_req != -1) {
+        console.log(server_join_req)
+        if (server_join_req == 0) {
+            // invalid
+            errormsg = "Invalid join code"
+        }
+        if (server_join_req == 1) {
+            // invalid
+            errormsg = "Could not reach server"
+        }
+        if (server_join_req == 2) {
+            game_state = 1
+        }
+    }
+    if (!isJoinBtnClicked) {
+        addTextButton("Join", -100, 290, () => {
+            isJoinBtnClicked = !isJoinBtnClicked
+            typed = []
+        })
+    } else {
+        addTextButton("Join", 270, 290, () => {
+            isJoinBtnClicked = !isJoinBtnClicked
+            typed = []
+        })
+        drawText(textinput_str, 350, 290)
+        if (typed.length < 5) {
+            canvas.fillStyle = "grey"
+            drawText("· Go! ·", 475, 290)
+        }
+        else {
+            addTextButton("Go!", 475, 290, async () => {
+
+                server_join_req = await Network.JoinRoomResult(typed.join(""))
+            })
+        }
+
+        canvas.fillStyle = "white"
+        handleTextInput()
+    }
+    // centerText("· Join ·", 290)
+    // 355, 300 > 450, 330
+    addTextButton("Find", -100, 320, () => {
+        console.log("Going to Find Server Screen")
+        game_state = 3
+    })
+    // 355, 330 > 450, 360
+    addTextButton("Host", -100, 350, () => {
+        console.log("Going to Host Server Screen")
+        game_state = 2
+    })
+}
+
+function joinscreen() {
+
+}
+function hostscreen() { }
+function findscreen() { }
+function LIESscreen() { }
 
 function countTPS() {
     return setInterval(() => {
@@ -131,6 +142,29 @@ function countTPS() {
         //console.debug(realTPS)
         _realTPSCounter = 0;
     }, 1000)
+}
+var typed = []
+window.addEventListener("keyup", (e) => {
+    if (curr_textinput == 0 && e.key.match(/((backspace)|[ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz23456789])/i))
+        typed.push(e.key)
+
+})
+// textareas: 
+// -- lying type in
+// -- enter join code
+function handleTextInput() {
+    if (isJoinBtnClicked && game_state == 0) {
+        curr_textinput = 0
+        if (typed[typed.length - 1] == "Backspace") {
+            typed.pop()
+            typed.pop()
+        }
+        if (typed.length > 5) {
+            typed.pop()
+        }
+        // console.log(typed)
+        textinput_str = typed.join(" ").padEnd(10, " _").toUpperCase()
+    }
 }
 
 sizeCvs()
@@ -159,6 +193,44 @@ function sizeCvs() {
 }
 function renderObjects(dt) {
 
+}
+// if x==-100, centered
+function addTextButton(text, xpos, ypos, callback) {
+    let fulltext = "· " + text + " ·"
+    let addonwidth = canvas.measureText("<").width
+    let w = canvas.measureText(fulltext).width
+    let h = canvas.font.substring(0, canvas.font.indexOf("px")) / gameConsts.scale
+    // console.log(h)
+    let y = ypos
+    let x = xpos
+    let id = "btn:" + text
+    if (xpos == -100) {
+        // console.log("centered!")
+        x = ((800 - (canvas.measureText(fulltext).width / gameConsts.scale)) / 2)
+    }
+    if (buttonEvents.indexOf(id) == -1) {
+        buttonignoresignals[id] = false
+        buttonEvents.push(id)
+        gameScreenCvs.addEventListener("mouseup", () => {
+            if (buttonignoresignals[id]) {
+                buttonignoresignals[id] = false
+                return
+            }
+            if (mouseInArea(x, y - h, (x + w), (y))) {
+                callback()
+            }
+            buttonEvents.splice(buttonEvents.indexOf(id), 1)
+
+        }, { once: true })
+    }
+    if (mouseInArea(x, y - h, (x + w), (y))) {
+        fulltext = "·> " + text + " <·"
+        drawText(fulltext, x - (.5 * addonwidth), y)
+    } else {
+        drawText(fulltext, x, y)
+
+    }
+    // console.log(fulltext + "::" + x + "::" + y)
 }
 
 function addButton(id, src, x, y, w, h, callback, options) {
@@ -199,7 +271,7 @@ function fillRect(x, y, w, h) {
 }
 
 function setFont(font) {
-    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Lacquer"
+    canvas.font = font.substring(0, font.indexOf("p")) * gameConsts.scale + "px Glass"
 }
 
 function drawText(str, x, y, maxWidth) {
@@ -209,13 +281,22 @@ function drawText(str, x, y, maxWidth) {
     canvas.fillText(str, x * gameConsts.scale, y * gameConsts.scale, maxWidth * gameConsts.scale)
 }
 
+function centerText(str, y) {
+    canvas.fillText(str, ((800 - (canvas.measureText(str).width / gameConsts.scale)) / 2) * gameConsts.scale, y * gameConsts.scale)
+}
+
+var imgs = {}
 function drawImage(x, y, w, h, src) {
     if (typeof src === "undefined") {
         return
     }
     try {
-        const i = document.getElementById(src)
-        canvas.drawImage(i, Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
+        if (!imgs[src]) {
+            imgs[src] = new Image()
+            imgs[src].src = "../public/img/" + src
+            console.log(imgs[src])
+        }
+        canvas.drawImage(imgs[src], Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
     }
     catch (e) {
         console.log("Image source not found: " + src)
