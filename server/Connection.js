@@ -1,4 +1,4 @@
-import { randomUsername } from "./usernameGen";
+import { randomUsername } from "./usernameGen.js";
 
 export default class Connection {
     #room;
@@ -8,7 +8,7 @@ export default class Connection {
 
     #username; get username() { return this.#username; }
     #avatar; get avatar() { return this.#avatar; }
-    
+
     constructor(room, socket) {
         this.#room = room;
         this.#socket = socket;
@@ -35,7 +35,7 @@ export default class Connection {
 
             this.#username = username;
             console.info({ "USER UPDATE USERNAME": { id: this.id, username: this.#username } });
-            
+
             this.#room.emitPlayersList();
         });
 

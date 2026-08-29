@@ -29,7 +29,8 @@ let ticks = 0
 
 
 setInterval(() => {
-    _gameLoop()
+    try { _gameLoop() } catch (e) { }
+
 
 }, (1000 / 60))
 
@@ -52,7 +53,7 @@ var game_states = {
     7: guessscreen
 }
 var game_state = 7
-
+console.log(game_state)
 function _gameLoop() {
     canvas.fillStyle = "black"
     fillRect(0, 0, 1000, 1000)
