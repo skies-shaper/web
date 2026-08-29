@@ -30,7 +30,7 @@ class Server {
         this.#app.use("/public", express.static(path.join(this.CLIENT_PATH, "public")));
         this.#app.use("/src", express.static(path.join(this.CLIENT_PATH, "src")));
 
-        this.#app.get("/", (req, res) => res.sendFile(path.join(this.CLIENT_PATH, "pages", "index.html")));
+        this.#app.get("/", (req, res) => res.sendFile(path.join(this.CLIENT_PATH, "index.html")));
 
         this.#io.on("connect", socket => {
             this.#handleSocket(socket);
