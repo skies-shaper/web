@@ -14,7 +14,7 @@ export default class Connection {
         this.#socket = socket;
 
         this.#username = room.generateUsername();
-        this.#avatar = 0 // Math.floor(Math.random() * 10)
+        this.#avatar = 0 // Math.floor(Math.random() * 3)
 
         // add event listeners
         this.#handleSocket();
@@ -24,6 +24,19 @@ export default class Connection {
         this.#socket.on("disconnect", reason => {
             console.info({ "USER DISCONNECTED": { id: this.id } });
             this.#room.removePlayer(this.id);
+        });
+
+        this.#socket.on("update-player-info", info => {
+            console.info({ "USER UPDATE INFO": { id: this.id, info } });
+            
+            const newUsername = info.username ?? this.#username;
+            this.#username = String(newUsername).slice(0, 30);
+
+            const newAvatar = info.avatar ?? this.#avatar;
+            if (Number.isInteger(newAvatar))
+                this.#avatar = Math.max(0, Math.min(2, newAvatar));
+
+            this.#room.emitPlayersList();
         });
     }
 
