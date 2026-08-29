@@ -1,5 +1,4 @@
 import Connection from './Connection.js'
-import { randomUsername } from "./usernameGen";
 
 export default class Room {
     static EMPTY_CLOSE_MS = 30*1000;
@@ -9,6 +8,7 @@ export default class Room {
 
     #connections = {};
     get n_connections() { return Object.keys(this.#connections).length; }
+    get usernames() { return Object.values(this.#connections).map(conn => conn.username); }
 
     #host = null; get host() { return this.#host; }
 
@@ -34,15 +34,6 @@ export default class Room {
             console.info({ "ROOM CLOSED DUE TO BEING EMPTY": { id: this.id } });
             this.#server.deleteRoom(this.id);
         }, Room.EMPTY_CLOSE_MS);
-    }
-
-    generateUsername() {
-        let username;
-
-        do username = randomUsername()
-        while (Object.values(this.#connections).map(conn => conn.username));
-        
-        return username;
     }
 
     addPlayer(socket) {

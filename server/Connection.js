@@ -1,4 +1,4 @@
-
+import { randomUsername } from "./usernameGen";
 
 export default class Connection {
     #room;
@@ -13,7 +13,9 @@ export default class Connection {
         this.#room = room;
         this.#socket = socket;
 
-        this.#username = room.generateUsername();
+        do this.#username = randomUsername();
+        while (room.usernames.includes(this.#username));
+
         this.#avatar = 0 // Math.floor(Math.random() * 3)
 
         // add event listeners
@@ -26,15 +28,22 @@ export default class Connection {
             this.#room.removePlayer(this.id);
         });
 
-        this.#socket.on("update-player-info", info => {
-            console.info({ "USER UPDATE INFO": { id: this.id, info } });
-            
-            const newUsername = info.username ?? this.#username;
-            this.#username = String(newUsername).slice(0, 30);
+        this.#socket.on("update-username", (username, callback) => {
+            username = String(username).slice(0, 30);
 
-            const newAvatar = info.avatar ?? this.#avatar;
-            if (Number.isInteger(newAvatar))
-                this.#avatar = Math.max(0, Math.min(2, newAvatar));
+            if (this.#room.usernames.includes(username)) return callback({ err: 'USERNAME_TAKEN' })
+
+            this.#username = username;
+            console.info({ "USER UPDATE USERNAME": { id: this.id, username: this.#username } });
+            
+            this.#room.emitPlayersList();
+        });
+
+        this.#socket.on("update-avatar", avatar => {
+            if (!Number.isInteger(avatar)) return;
+
+            this.#avatar = Math.max(0, Math.min(2, avatar));
+            console.info({ "USER UPDATE AVATAR": { id: this.id, avatar: this.#avatar } });
 
             this.#room.emitPlayersList();
         });
