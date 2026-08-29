@@ -3,6 +3,9 @@ import { moveRectCollideMovingRect, rectRectOverlaps, rectCircleOverlaps } from 
 
 import keyHandler from "./keyhandler.js"
 
+/*
+BASE SCALE: 1600x900
+*/
 
 keyHandler.setKeyBindings({
     //"moveUp": ["KeyW", "ArrowUp"],
@@ -28,7 +31,6 @@ let mouseY = 400
 const HOWLER_POS_SCALE = 0.01
 
 const publicPath = filename => window.location.pathname + "public/" + filename;
-musicStart.play()
 
 
 const TPS = 30
@@ -38,7 +40,7 @@ const MAX_TIME_BT_TICKS = TIME_PER_TICK * 2 - 3;
 let time = 0;
 let _stopGameLoop = false;
 let _realTPSCounter = 0;
-
+let realTPS = 0;
 let totalTicks = 0;
 let animationTicks = 0
 // // setFont("20px Lacquer")
@@ -104,7 +106,10 @@ keyHandler.onInputDown('throwTape', () => {
         tape.particles.push({ start: Vec.copy(player.pos), end: null })
     }
 })
-_gameLoop()
+setInterval(() => {
+    _gameLoop()
+
+}, (1000 / 60))
 countTPS()
 
 
@@ -115,7 +120,9 @@ gameScreenCvs.addEventListener("mousemove", (event) => {
 })
 
 function _gameLoop() {
-
+    canvas.fillStyle = "red"
+    console.log("hello!")
+    fillRect(0, 0, 400, 400)
 }
 
 function countTPS() {
