@@ -65,7 +65,9 @@ function _gameLoop() {
 var isJoinBtnClicked = false
 var textinput_str = ""
 var curr_textinput = 0
-var server_join_req = -1
+
+var server_join_res = null;
+
 function mainmenu() {
     canvas.fillStyle = "white"
     setFont("60px")
@@ -77,17 +79,16 @@ function mainmenu() {
 
     setFont("30px")
     // 355,270 > 450,300
-    if (server_join_req != -1) {
-        console.log(server_join_req)
-        if (server_join_req == 0) {
-            // invalid
-            errormsg = "Invalid join code"
-        }
-        if (server_join_req == 1) {
-            // invalid
-            errormsg = "Could not reach server"
-        }
-        if (server_join_req == 2) {
+    if (server_join_res !== null) {
+
+        console.log(server_join_res)
+
+        if (server_join_res.err) {
+            errormsg = {
+                'INVALID_CODE': "Invalid join code",
+                'TIMED_OUT': "Could not reach server"
+            }[server_join_res.err]
+        } else {
             game_state = 1
         }
     }
@@ -108,8 +109,7 @@ function mainmenu() {
         }
         else {
             addTextButton("Go!", 475, 290, async () => {
-
-                server_join_req = await Network.JoinRoomResult(typed.join(""))
+                server_join_res = await Network.JoinRoomResult(typed.join(""))
             })
         }
 

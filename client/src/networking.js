@@ -1,14 +1,19 @@
+export const socket = io();
+export const TIMEOUT_MS = 5000;
 
-export async function init_networkstuff() {
+export async function emitWithTimeoutAck(...args) {
+    let res;
+    try { 
+        res = await socket.timeout(TIMEOUT_MS).emitWithAck(...args); 
+    } catch (err) {
+        res = { err: "TIMED_OUT" }
+    }
 
+    return res;
 }
 
-// Makes request to server with given room ID
-// If not valid: return 0
-// If server down: return 1
-// If room is valid: server_join_req = 2
 export async function JoinRoomResult(id) {
-    return 2
+    return emitWithTimeoutAck('join-room', id);
 }
 
 // returns a list of the people in a room: ["username1", "username2"]

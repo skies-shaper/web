@@ -65,13 +65,13 @@ class Server {
     }
 
     #handleSocket(socket) {
-        socket.on("join", (roomId, callback) => {
+        socket.on("join-room", (roomId, callback) => {
             if (!Object.hasOwn(this.#rooms, roomId)) 
-                callback({ status: 'error', msg: "Room does not exist." });
+                callback({ err: 'INVALID_CODE' });
             
             this.#rooms[roomId].addPlayer(socket);
 
-            callback({ status: 'ok' });
+            callback({ });
         });
     }
 
@@ -103,6 +103,7 @@ class Server {
     }
 
     deleteRoom(id) {
+        this.#rooms[id].destory();
         delete this.#rooms[id];
     }
 };

@@ -29,7 +29,7 @@ export default class Room {
 
         this.#emptyTimeout = setTimeout(() => {
             console.info({ "ROOM CLOSED DUE TO BEING EMPTY": { id: this.id } });
-            this.destory();
+            this.#server.deleteRoom(this.id);
         }, Room.EMPTY_CLOSE_MS);
     }
 
@@ -40,6 +40,8 @@ export default class Room {
     }
 
     removePlayer(id) {
+        this.#connections[id].destroy();
+
         delete this.#connections[id];
 
         if (this.#connections.length == 0)
@@ -49,7 +51,7 @@ export default class Room {
     destory() {
         clearTimeout(this.#emptyTimeout);
 
-        this.#socketRoom.removeAllListeners();
-        this.#server.deleteRoom(this.id);
+        for (const id of Object.keys(this.#connections))
+            this.removePlayer(id);
     }
 }

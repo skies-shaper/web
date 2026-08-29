@@ -18,12 +18,11 @@ export default class Connection {
     #handleSocket = () => {
         this.#socket.on("disconnect", reason => {
             console.info({ "USER LEFT ROOM": { id: this.id } });
-            this.destroy()
+            this.#room.removePlayer(this.id);
         });
     }
 
     destroy() {
         this.#socket.removeAllListeners();
-        this.#room.removePlayer(this.id);
     }
 }
