@@ -10,6 +10,8 @@ export default class Room {
     #connections = {};
     get n_connections() { return Object.keys(this.#connections).length; }
 
+    #host = null; get host() { return this.#host; }
+
     #server;
     #socketRoom;
     #emptyTimeout;
@@ -52,6 +54,11 @@ export default class Room {
         socket.join(this.#id);
         clearTimeout(this.#emptyTimeout);
 
+        if (this.#host === null)
+            this.#host = socket.id;
+
+        this.emitPlayersList();
+
         return { username: this.#connections[socket.id].username };
     }
 
@@ -64,8 +71,25 @@ export default class Room {
 
         delete this.#connections[id];
 
-        if (this.n_connections === 0)
+        if (this.n_connections === 0) {
             this.#startEmptyTimeout();
+            this.#host = null;
+        } else {
+            if (id === this.#host)
+                this.#host = Object.keys(this.#connections)[0];
+        }
+
+        this.emitPlayersList();
+    }
+
+    emitPlayersList() {
+        this.#socketRoom.emit('players-list', { 
+            players: Object.values(this.#connections).map(conn => ({ 
+                username: conn.username,
+                isHost: conn.socket.id === this.#host,
+                avatar: 0
+            })) 
+        });
     }
 
     destory() {

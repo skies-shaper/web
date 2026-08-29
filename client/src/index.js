@@ -177,11 +177,12 @@ let avatars = [
 ]
 let player_avatar = 0
 let players_list = [{ name: "a", avatar: 0 }, { name: "b", avatar: 0 }, { name: "c", avatar: 0 }, { name: "d", avatar: 0 }, { name: "e", avatar: 0 }, { name: "f", avatar: 0 }]
+
+Network.socket.on('players-list', ({ players }) => players_list = players);
+
 async function joinscreen() {
 
     var js_leftmargin = 25
-    if (/*it's been like .5 seconds*/false)
-        players_list = Network.GetRoomPeopleList()
 
     canvas.fillStyle = "white"
     // ability to set name (textbox)
