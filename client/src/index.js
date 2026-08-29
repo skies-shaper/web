@@ -40,8 +40,6 @@ setInterval(() => {
 }, (1000 / 60))
 countTPS()
 
-
-
 gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseX = event.offsetX / gameConsts.scale * window.devicePixelRatio
     mouseY = event.offsetY / gameConsts.scale * window.devicePixelRatio
@@ -67,6 +65,18 @@ var textinput_str = ""
 var curr_textinput = 0
 
 var server_join_res = null;
+var errormsg = null;
+
+async function handleHashChange() {
+    if (window.location.hash.length != 6) return; // hashtag + 5 char room id 
+
+    const roomId = window.location.hash.substring(1);
+    console.log(roomId);
+    server_join_res = await Network.JoinRoomResult(roomId)
+}
+
+window.addEventListener("hashchange", e => handleHashChange());
+handleHashChange();
 
 function mainmenu() {
     canvas.fillStyle = "white"
@@ -109,7 +119,7 @@ function mainmenu() {
         }
         else {
             addTextButton("Go!", 475, 290, async () => {
-                server_join_res = await Network.JoinRoomResult(typed.join(""))
+                window.location.hash = typed.join("");
             })
         }
 

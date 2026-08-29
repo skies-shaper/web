@@ -66,8 +66,10 @@ class Server {
 
     #handleSocket(socket) {
         socket.on("join-room", (roomId, callback) => {
+            roomId = roomId.toUpperCase();
+            
             if (!Object.hasOwn(this.#rooms, roomId)) 
-                callback({ err: 'INVALID_CODE' });
+                return callback({ err: 'INVALID_CODE' });
             
             this.#rooms[roomId].addPlayer(socket);
 
