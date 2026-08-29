@@ -1,18 +1,14 @@
+export default class Connection {
+    #socket; get socket() { return this.#socket; }
 
-// export Connection class
-module.exports = class Connection {
-    #socket;
-    get socket() { return this.#socket; }
+    #room;
 
-    // constants
-    get ID() { return this.#socket.id; }
-
-    player = null;
+    get id() { return this.#socket.id; }
     
-    constructor(match, socket) {
-        console.info({ "USER CONNECTED": { id: socket.id } });
+    constructor(room, socket) {
+        console.info({ "USER JOINED ROOM": { id: socket.id, room: room.id } });
 
-        this.match = match;
+        this.#room = room;
         this.#socket = socket;
 
         // add event listeners
@@ -21,16 +17,13 @@ module.exports = class Connection {
 
     #handleSocket = () => {
         this.#socket.on("disconnect", reason => {
-            this.destroy();
+            console.info({ "USER LEFT ROOM": { id: this.id } });
+            this.destroy()
         });
     }
 
     destroy() {
-        console.info({ "USER DISCONNECTED": { id: this.ID } });
-        
-        if (this.player) this.killPlayer();
-        delete this.match.connections[this.ID];
-
-        this.#socket.removeAllListeners(); 
+        this.#socket.removeAllListeners();
+        this.#room.removePlayer(this.id);
     }
 }
