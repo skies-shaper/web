@@ -3,8 +3,8 @@ export const TIMEOUT_MS = 5000;
 
 export async function emitWithTimeoutAck(...args) {
     let res;
-    try { 
-        res = await socket.timeout(TIMEOUT_MS).emitWithAck(...args); 
+    try {
+        res = await socket.timeout(TIMEOUT_MS).emitWithAck(...args);
     } catch (err) {
         res = { err: "TIMED_OUT" }
     }
@@ -12,6 +12,21 @@ export async function emitWithTimeoutAck(...args) {
     return res;
 }
 
+export async function init_networkstuff() {
+
+}
+//returns true if is host, false otherwise (do JS modules respect inheritance hierarchies??? maybe idk anyways this function is here also)
+export function isHost() {
+    return true
+}
+// creates room. Returns room ID for display purposes
+export async function create_room() {
+    return "ABCDE"
+}
+// Makes request to server with given room ID
+// If not valid: return 0
+// If server down: return 1
+// If room is valid: server_join_req = 2
 export async function JoinRoomResult(id) {
     return emitWithTimeoutAck('join-room', id);
 }

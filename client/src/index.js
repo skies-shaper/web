@@ -1,7 +1,7 @@
 import * as Network from "./networking.js"
 
 /*
-BASE SCALE: 1600x900
+BASE SCALE: 800x450
 */
 const gameScreenCvs = document.getElementById("gamescreen")
 const canvas = gameScreenCvs.getContext("2d")
@@ -88,6 +88,11 @@ function mainmenu() {
     drawImage(800 - 80, 0, 80, 80, "spiderweb-right.png")
 
     setFont("30px")
+
+    canvas.fillStyle = "red"
+    centerText(errormsg, 250)
+    canvas.fillStyle = "white"
+
     // 355,270 > 450,300
     if (server_join_res !== null) {
 
@@ -133,26 +138,34 @@ function mainmenu() {
         game_state = 3
     })
     // 355, 330 > 450, 360
-    addTextButton("Host", -100, 350, () => {
+    addTextButton("Host", -100, 350, async () => {
         console.log("Going to Host Server Screen")
         game_state = 2
+        room_ID = await Network.create_room()
     })
 }
 
 function joinscreen() {
 
 }
-function hostscreen() { }
+var room_ID = ""
+function hostscreen() {
+    canvas.fillStyle = "white"
+    setFont("20px")
+    centerText("Hosting Room", 30)
+    setFont("100px")
+    if (typeof room_ID != "string") {
+        centerText("- - - - -", 110)
+    } else {
+        centerText(room_ID, 110)
+    }
+
+    setFont("60px")
+    addTextButton("Begin game", -100, 300)
+}
 function findscreen() { }
 function LIESscreen() { }
 
-function countTPS() {
-    return setInterval(() => {
-        realTPS = _realTPSCounter;
-        //console.debug(realTPS)
-        _realTPSCounter = 0;
-    }, 1000)
-}
 var typed = []
 window.addEventListener("keyup", (e) => {
     if (curr_textinput == 0 && e.key.match(/((backspace)|[ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz23456789])/i))
@@ -208,7 +221,7 @@ function renderObjects(dt) {
 function addTextButton(text, xpos, ypos, callback) {
     let fulltext = "· " + text + " ·"
     let addonwidth = canvas.measureText("<").width
-    let w = canvas.measureText(fulltext).width
+    let w = canvas.measureText(fulltext).width / gameConsts.scale
     let h = canvas.font.substring(0, canvas.font.indexOf("px")) / gameConsts.scale
     // console.log(h)
     let y = ypos
