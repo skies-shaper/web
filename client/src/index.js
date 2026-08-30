@@ -186,6 +186,7 @@ let avatars = [
 let player_avatar = 0
 let players_list = [{ name: "a", avatar: 0 }, { name: "b", avatar: 0 }, { name: "c", avatar: 0 }, { name: "d", avatar: 0 }, { name: "e", avatar: 0 }, { name: "f", avatar: 0 }]
 Network.socket.on('players-list', ({ players }) => {
+    console.log("received updated playerlist")
     players_list = players
     let player_obj = players.find((a) => a.id == Network.socket.id)
     name = player_obj.username
@@ -219,22 +220,28 @@ async function joinscreen() {
         drawText(name, 430, 90)
     else
         drawText(textinput_str, 430, 90)
-    addTextButton((editing_name ? "Submit" : "Edit"), ((editing_name) ? (canvas.measureText(textinput_str).width / gameConsts.scale) + 430 + 20 : (canvas.measureText(name).width / gameConsts.scale) + 430 + 20), 90, async () => {
+    addTextButton((editing_name ? "Submit" : "Edit"), ((editing_name) ? (canvas.measureText(textinput_str).width / gameConsts.scale) + 430 + 20 : (canvas.measureText(name).width / gameConsts.scale) + 430 + 20), 90, () => {
+        console.log("click")
         if (!editing_name) {
             typed = []
             prevname = name
             curr_textinput = 1
+            editing_name = true
+            return
         }
         if (editing_name) {
             if (name == "") {
                 name = prevname
+                console.log("bad name change")
             } else {
-                Network.set_name(name)
                 name = textinput_str
+                Network.set_name(name)
+                console.log("network-setname!")
             }
+            editing_name = false
+            return
         }
-        editing_name = !editing_name
-    })
+    }, "SUBMIT-BTN")
 
     // draw avatar images in a like circle frame etc up here once complete. probably store all in a specific folder that is auto-filled 
     draw_profilePic(600 - 50 - 80, 200 - 30, 60, (player_avatar - 1 + max_num_avatars) % max_num_avatars)
@@ -450,17 +457,17 @@ Network.socket.on("game-end", ({ scoreObjs }) => {
 
         return {
             score: obj.score,
-            name: player.username, 
+            name: player.username,
             profile: player.avatar,
 
             connections: obj.liesReachedPlayers
                 .map(lie => [id, ...lie])
-                .map(lie => lie.map(playerId => players_list.findIndex(p => p.id == playerId))), 
+                .map(lie => lie.map(playerId => players_list.findIndex(p => p.id == playerId))),
         }
     })
 
     console.log(scoreobj);
-
+    sorted_playerlist = scoreobj.sort((a, b) => b.score - a.score)
     game_state = 8
 })
 
@@ -470,6 +477,24 @@ var anglemod = 0
 var angleacc = 0.1
 var web_ticks = 0
 var alphamod = 0
+/*{
+  "LSnoC6FIUrOMrhnsAAAH": {
+    "score": 0,
+    "liesReachedPlayers": [
+      [
+        "RpluDmX8Adz4C6m5AAAF"
+      ]
+    ]
+  },
+  "RpluDmX8Adz4C6m5AAAF": {
+    "score": 0,
+    "liesReachedPlayers": [
+      [
+        "LSnoC6FIUrOMrhnsAAAH"
+      ]
+    ]
+  }
+}*/
 function scorescreen() {
     var len = sorted_playerlist.length
     var f_base = (Math.PI / (len / 2))
@@ -504,6 +529,9 @@ function scorescreen() {
     fillRect(399, 50, 2, 385)
     setFont("60px")
     drawText("Scoring", 25, 50)
+    setFont("30px")
+    drawText(name, 800 - (canvas.measureText(name).width / gameConsts.scale) - 10, 35)
+    draw_profilePic(800 - (canvas.measureText(name).width / gameConsts.scale) - 50, 10, 30, player_avatar)
 
     setFont((prof_pic_size / 2) + "px")
     for (let i = 0; i < len; i++) {
@@ -604,11 +632,8 @@ window.addEventListener("keydown", (e) => {
         else
             typed.push(e.key)
     }
-    if ((curr_textinput == 2) && e.key.match(/((backspace)|[A-Za-z0-9\ ])/)) {
-        if (e.shiftKey)
-            typed.push(e.key.toLowerCase())
-        else
-            typed.push(e.key)
+    if ((curr_textinput == 2) && e.key.match(/((backspace)|[A-Za-z0-9\.'"!, ])/)) {
+        typed.push(e.key)
     }
 })
 // textareas: 
@@ -626,9 +651,7 @@ async function handleTextInput() {
             typed.pop()
             typed.pop()
         }
-        if ((typed.length > 0) && typed[typed.length - 1] == "Enter") {
-            server_join_res = await Network.JoinRoomResult(typed.join(""))
-        }
+
         if ((typed.length > 0) && (typed.length > 5 || typed[typed.length - 1].length > 1)) {
             typed.pop()
         }
@@ -641,15 +664,6 @@ async function handleTextInput() {
             typed.pop()
             typed.pop()
         }
-        if (typed[typed.length - 1] == "Enter") {
-            if (name == "") {
-                name = prevname
-            } else {
-                Network.set_name(name)
-                name = textinput_str
-            }
-            editing_name = false
-        }
         if ((canvas.measureText(typed.join("")).width / gameConsts.scale) > 300 || (typed.length > 0 && typed[typed.length - 1].length > 1)) {
             typed.pop()
         }
@@ -660,15 +674,6 @@ async function handleTextInput() {
         if (typed[typed.length - 1] == "Backspace") {
             typed.pop()
             typed.pop()
-        }
-        if (typed[typed.length - 1] == "Enter") {
-            if (name == "") {
-                name = prevname
-            } else {
-                Network.set_name(name)
-                name = textinput_str
-            }
-            editing_name = false
         }
         if ((canvas.measureText(typed.join("")).width / gameConsts.scale) > 700 || (typed.length > 0 && typed[typed.length - 1].length > 1)) {
             typed.pop()

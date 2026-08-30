@@ -4,7 +4,7 @@ import {
     mouseY, buttonEvents,
     buttonignoresignals, gameScreenCvs
 } from "./index.js"
-export function addTextButton(text, xpos, ypos, callback) {
+export function addTextButton(text, xpos, ypos, callback, _id) {
     let fulltext = "· " + text + " ·"
     let addonwidth = canvas.measureText("<").width
     let w = canvas.measureText(fulltext).width / gameConsts.scale
@@ -12,7 +12,10 @@ export function addTextButton(text, xpos, ypos, callback) {
     // console.log(h)
     let y = ypos
     let x = xpos
-    let id = "btn:" + text + "::" + ypos + "::" + xpos
+    let id = "btn:" + ypos + "::" + xpos
+    if (typeof _id != "undefined") {
+        id = _id
+    }
     if (xpos == -100) {
         // console.log("centered!")
         x = ((800 - (canvas.measureText(fulltext).width / gameConsts.scale)) / 2)
@@ -26,6 +29,7 @@ export function addTextButton(text, xpos, ypos, callback) {
                 return
             }
             if (mouseInArea(x, y - h, (x + w), (y))) {
+                console.log("callback for button with", text)
                 callback()
             }
             buttonEvents.splice(buttonEvents.indexOf(id), 1)

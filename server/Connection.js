@@ -35,10 +35,9 @@ export default class Connection {
         });
 
         this.#socket.on('update-username', (username, callback) => {
-            username = String(username).slice(0, 30);
-
+            console.log(username)
             if (this.#room.usernames.includes(username)) return callback({ err: 'USERNAME_TAKEN' })
-
+            console.log("username works")
             this.#username = username;
             console.info({ "USER UPDATE USERNAME": { id: this.id, username: this.#username } });
 
