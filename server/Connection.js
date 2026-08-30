@@ -9,6 +9,12 @@ export default class Connection {
     #username; get username() { return this.#username; }
     #avatar; get avatar() { return this.#avatar; }
 
+    #writtenLie = null; get writtenLie() { return this.#writtenLie; }
+    #pickedLieI = null; get pickedLieI() { return this.#pickedLieI; }
+    #turnSubmitted = false; get turnSubmitted() { return this.#turnSubmitted; }
+
+    #score = 0; get score() { return this.#score; }
+
     constructor(room, socket) {
         this.#room = room;
         this.#socket = socket;
@@ -23,12 +29,12 @@ export default class Connection {
     }
 
     #handleSocket = () => {
-        this.#socket.on("disconnect", reason => {
+        this.#socket.on('disconnect', reason => {
             console.info({ "USER DISCONNECTED": { id: this.id } });
             this.#room.removePlayer(this.id);
         });
 
-        this.#socket.on("update-username", (username, callback) => {
+        this.#socket.on('update-username', (username, callback) => {
             username = String(username).slice(0, 30);
 
             if (this.#room.usernames.includes(username)) return callback({ err: 'USERNAME_TAKEN' })
@@ -39,7 +45,7 @@ export default class Connection {
             this.#room.emitPlayersList();
         });
 
-        this.#socket.on("update-avatar", avatar => {
+        this.#socket.on('update-avatar', avatar => {
             if (!Number.isInteger(avatar)) return;
 
             this.#avatar = Math.max(0, Math.min(2, avatar));
@@ -47,6 +53,44 @@ export default class Connection {
 
             this.#room.emitPlayersList();
         });
+
+        this.#socket.on('start-game', () => {
+            if (this.id !== this.#room.host) return;
+            this.#room.startGame();
+        });
+
+        this.#socket.on('lie-write', lie => {
+            lie = String(username).slice(0, 200);
+
+            this.#writtenLie = lie;
+        });
+
+        this.#socket.on('lie-pick', choice => {
+            if (!Number.isInteger(choice)) return;
+
+            this.#pickedLieI = Math.max(0, Math.min(2, choice));
+        });
+
+        this.#socket.on('submit-turn', () => {
+            this.turnSubmitted = true;
+            this.#room.goNextPhaseIfEveryoneSubmitted();
+        });
+
+        this.#socket.on('unsubmit-turn', () => {
+            this.#turnSubmitted = false;
+        })
+    }
+
+    newPhase(factObjs) { 
+        this.#writtenLie = "";
+        this.#pickedLieI = null;
+        this.#turnSubmitted = false;
+
+        this.#socket.emit('facts', { facts: factObjs.map(fact => fact.fact), phase: this.#room.phase });
+    }
+
+    awardLiePoints(survivedRounds) {
+        this.#score += survivedRounds;
     }
 
     destroy() {

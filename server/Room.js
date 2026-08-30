@@ -1,7 +1,12 @@
 import Connection from './Connection.js'
+import { shuffle } from './utils.js';
+import { facts } from './facts.json' with { type: 'json' };
 
 export default class Room {
-    static EMPTY_CLOSE_MS = 30*1000;
+    static get EMPTY_CLOSE_MS() { return 30*1000; }
+    static get PHASE_END_GRACE_PERIOD() { return 1000; }
+    
+    static get N_FACTS() { return 5; }
 
     #id; get id() { return this.#id; }
     #description; get description() { return this.#description; }
@@ -11,10 +16,16 @@ export default class Room {
     get usernames() { return Object.values(this.#connections).map(conn => conn.username); }
 
     #host = null; get host() { return this.#host; }
+    #phase = 'lobby'; get phase() { return this.#phase; }
+    #turnsLeft = null;
+    #factGroups = null;
+    #orderedPlayers = null;
+
+    #emptyTimeout = null;
+    #nextPhaseTimeout = null;
 
     #server;
     #socketRoom;
-    #emptyTimeout;
 
     constructor(server, id, description) {
         this.#id = id;
@@ -37,6 +48,7 @@ export default class Room {
     }
 
     addPlayer(socket) {
+        if (this.#phase !== 'lobby') return { err: 'GAME_STARTED' }
         if (this.n_connections === 10) return { err: 'ROOM_FULL' } ;
 
         console.info({ "USER JOINED ROOM": { id: socket.id, room: this.#id } });
@@ -76,12 +88,95 @@ export default class Room {
     emitPlayersList() {
         this.#socketRoom.emit('players-list', { 
             players: Object.values(this.#connections).map(conn => ({ 
-                id: conn.socket.id,
+                id: conn.id,
                 username: conn.username,
-                isHost: conn.socket.id === this.#host,
+                isHost: conn.id === this.#host,
                 avatar: conn.avatar
             })) 
         });
+    }
+
+    startGame() {
+        if (this.#phase !== 'lobby') return;
+
+        this.#turnsLeft = this.n_connections - 1;
+        this.#phase = 'writing';
+
+        const factGroupIs = new Set();
+        while (factGroupIs.size < this.n_connections) 
+            factGroupIs.add(Math.floor(Math.random() * facts.length));
+
+        this.#factGroups = []
+        for (const factGroupI of factGroupIs)
+            this.#factGroups.push(shuffle([ ...facts[i]].slice(Room.N_FACTS - 1))
+                .map(fact => ({ fact, writerPlayer: null, survivedRounds: 0 })));
+        
+        this.#orderedPlayers = shuffle(Object.values(this.#connections));
+    }
+
+    goNextPhase() {
+        clearTimeout(this.#nextPhaseTimeout);
+
+        // end phase
+
+        Object.values(this.#orderedPlayers).forEach((conn, i) => {
+            const factGroup = this.getFactGroup(i);
+
+            if (this.#phase === 'writing') {
+                let writtenLie = conn.writtenLie.trim();
+                if (writtenLie.length === 0) lie = "*empty*";
+                
+                const factObj = { fact: writtenLie, writerPlayer: conn, survivedRounds: 0 }
+
+                const insertI = Math.floor(Math.random() * Room.N_FACTS)
+                factGroup.splice(insertI, 0, factObj);
+
+            } else if (this.#phase === 'picking') {
+                let pickedLieI = conn.pickedLieI ?? Math.floor(Math.random() * Room.N_FACTS);
+                factGroup.splice(pickedLieI, 1);
+
+                for (const factObj of factGroup) {
+                    factObj.survivedRounds++;
+                    factObj.writerPlayer?.awardLiePoints(factObj.survivedRounds);
+                }
+
+            } else console.error({ 'INVALID PHASE': { phase: this.#phase } });
+        });
+
+        // start new phase
+
+        if (this.#phase === 'writing') {
+            this.#phase = 'picking';
+        } else if (this.#phase === 'picking') {
+            this.#phase = 'writing';
+            this.#turnsLeft--;
+        } else console.error({ 'INVALID PHASE': { phase: this.#phase } });
+
+        if (this.#turnsLeft === 0) {
+            const scores = Object.fromEntries(this.#orderedPlayers.map(conn => [conn.id, conn.score]));
+            this.#socketRoom.emit('game-end', { scores });
+        } else {
+            Object.values(this.#orderedPlayers).forEach((conn, i) => conn.newPhase(this.getFactGroup(i)));
+            this.#nextPhaseTimeout = setTimeout(this.endPhase, this.getPhaseLength());
+        }
+    }
+
+    goNextPhaseIfEveryoneSubmitted() {
+        if (!Object.values(this.#connections).every(conn => conn.turnSubmitted)) return;
+        this.goNextPhase();
+    }
+
+    endPhase() {
+        this.#socketRoom.emit('phase-end');
+        setTimeout(this.goNextPhase, Room.PHASE_END_GRACE_PERIOD)
+    }
+
+    getFactGroup(playerI) { return this.#factGroups[(playerI + this.#turnsLeft) % this.#factGroups.length]; }
+
+    getPhaseLength() { 
+        if (this.#phase === 'writing') return this.#turnsLeft === this.n_connections - 1? 60*1000 : 30*1000; 
+        if (this.#phase === 'picking') return 30*1000;
+        console.error({ 'INVALID PHASE': { phase: this.#phase } });
     }
 
     destory() {
