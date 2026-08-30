@@ -43,8 +43,6 @@ function preload() {
             drawImage(0, 0, 10, 10, `avatar/${i}/frame_${String(j).padStart(2, "0")}_delay-0.1s.png`)
         }
     }
-
-
 }
 
 preload()
@@ -72,6 +70,7 @@ var game_state = 0
 console.log(game_state)
 
 function _gameLoop() {
+
     canvas.imageSmoothingEnabled = false
     num_avatars_drawn = 0
     canvas.fillStyle = "black"
@@ -138,11 +137,17 @@ function mainmenu() {
     }
     if (!isJoinBtnClicked) {
         addTextButton("Join", -100, 290, () => {
+            if (game_state != 0) {
+                return
+            }
             isJoinBtnClicked = !isJoinBtnClicked
             typed = []
         })
     } else {
         addTextButton("Join", 270, 290, () => {
+            if (game_state != 0) {
+                return
+            }
             isJoinBtnClicked = !isJoinBtnClicked
             typed = []
         })
@@ -153,6 +158,9 @@ function mainmenu() {
         }
         else {
             addTextButton("Go!", 475, 290, async () => {
+                if (game_state != 0) {
+                    return
+                }
                 window.location.hash = typed.join("");
             })
         }
@@ -171,6 +179,9 @@ function mainmenu() {
 
     // 355, 330 > 450, 360
     addTextButton("Host", -100, 350, async () => {
+        if (game_state != 0) {
+            return
+        }
         console.log("Going to Host Server Screen")
         game_state = 2
 
@@ -182,7 +193,10 @@ function mainmenu() {
         // join room
         window.location.hash = room_ID;
     })
-    addTextButton("About", -100, 415, async () => {
+    addTextButton("About", -100, 415, () => {
+        if (game_state != 0) {
+            return
+        }
         console.log("Going to About Screen")
         game_state = 5
     })
@@ -232,6 +246,9 @@ async function joinscreen() {
     else
         drawText(textinput_str, 430, 90)
     addTextButton((editing_name ? "Submit" : "Edit"), ((editing_name) ? (canvas.measureText(textinput_str).width / gameConsts.scale) + 430 + 20 : (canvas.measureText(name).width / gameConsts.scale) + 430 + 20), 90, () => {
+        if (game_state != 1) {
+            return
+        }
         console.log("click")
         if (!editing_name) {
             typed = []
@@ -271,12 +288,18 @@ async function joinscreen() {
     setFont("25px")
 
     addTextButton("prev", 430, 325, () => {
+        if (game_state != 1) {
+            return
+        }
         // increment player's stored avatar ID by 1 % max_num_avatars
         player_avatar++
         player_avatar %= max_num_avatars
         Network.set_server_avatarID(player_avatar)
     })
     addTextButton("next", 700, 325, () => {
+        if (game_state != 1) {
+            return
+        }
         player_avatar--
         player_avatar += max_num_avatars
         player_avatar %= max_num_avatars
@@ -295,11 +318,11 @@ async function joinscreen() {
     if (is_host) {
         if (players_list.length > 1) {
             addTextButton("Begin Game", js_leftmargin, 435, () => {
+                if (game_state != 1) {
+                    return
+                }
                 Network.beginGame()
                 loadingscreenSubText = "Joining Game"
-
-
-
             })
         } else {
             canvas.fillStyle = "grey"
@@ -324,6 +347,9 @@ function hostscreen() {
 
     setFont("60px")
     addTextButton("Begin game", -100, 300, () => {
+        if (game_state != 2) {
+            return
+        }
         start_audio()
         game_state = 1
         is_host = true
@@ -364,6 +390,9 @@ function aboutscreen() {
 
 
     addTextButton("Back", -100, 415, async () => {
+        if (game_state != 5) {
+            return
+        }
         console.log("Going to main menu")
         game_state = 0
     })
@@ -426,6 +455,9 @@ function lyingscreen() {
     drawText(textinput_str, 25, 230)
 
     addTextButton("submit", 25, 300, () => {
+        if (game_state != 6) {
+            return
+        }
         console.log("submit lie!!!")
         Network.submit_lie(textinput_str)
     })
@@ -447,6 +479,9 @@ function guessscreen() {
     setFont("20px")
     for (let i = 0; i < guess_options.length; i++) {
         addTextButton("The Lie", 25, 155 + i * 20, () => {
+            if (game_state != 7) {
+                return
+            }
             guess_choice = i
             console.log(i)
             Network.guess(i)
@@ -600,7 +635,6 @@ function scorescreen() {
 
     }
     for (let i = 0; i < len; i++) {
-
         canvas.strokeStyle = "white"
         canvas.lineWidth = 2 * gameConsts.scale
         canvas.beginPath()

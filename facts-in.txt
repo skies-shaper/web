@@ -38,11 +38,11 @@ Part of one of Japan's national highways has an 1,110 foot long staircase and no
 manitoba has the worlds only polar bear jail
 Film/TV:
 A horror director offered audiences 1000 dollar insurance in case they died of fright in his movies
-there is a podcast dedicated entirely to annual rewatches of Paul blart: mall op 2
+there is a podcast dedicated entirely to annual rewatches of Paul blart:mall op 2
 the food on the set of the Titanic was spiked with PCP and no one found out who did it
 many of the actors in the original 1979 mad max movie were paid in cases of beer
 Patrick Pearce is the current record holder for worst Jeopardy score at -7,400 dollars
-Language: 
+Language:
 the word outrage isn’t related to the words “out” or “rage”
 the original word for “bear” is lost because people thought saying it would summon a bear
 “You” is more formal than “Thou”
@@ -55,7 +55,7 @@ astronomer mike brown once wrote a book titled “how I killed pluto and why it 
 During world war 2, winston churchill wrote an essay about aliens on the moon
 William Shakespeare has two lost plays including a sequel to Love’s Labour’s Lost
 Alice in Wonderland is partly a satire on abstract mathematics
-CS: 
+CS:
 Python is named after Monty python, not the snake
 Importing antigravity is a coRe feature of python
 HTTP error 418 means “Im a teapot”

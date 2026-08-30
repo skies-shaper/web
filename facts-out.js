@@ -5,8 +5,11 @@ console.log(inList)
 var out_obj = {
     facts: []
 }
+
+
 let construct_obj = {}
 for (let i = 0; i < inList.length; i++) {
+
     if (inList[i].charAt(inList[i].length - 1) == ":") {
         out_obj.facts.push({})
         Object.assign(out_obj.facts[out_obj.facts.length - 1], construct_obj)
