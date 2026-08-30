@@ -1,5 +1,5 @@
 import Connection from './Connection.js'
-import { shuffle } from './utils.js';
+import { shuffle, randomLatinSquare } from './utils.js';
 import facts_ from './facts.json' with { type: 'json' };
 const facts = facts_.facts
 export default class Room {
@@ -17,9 +17,8 @@ export default class Room {
 
     #host = null; get host() { return this.#host; }
     #phase = 'lobby'; get phase() { return this.#phase; }
-    #turnsLeft = null;
-    #factGroups = null;
-    #orderedPlayers = null;
+    #roundsLeft = null;
+    #roundFactGroups = null;
     #lies = [];
 
     #emptyTimeout = null;
@@ -100,27 +99,27 @@ export default class Room {
     startGame() {
         if (this.#phase !== 'lobby') return;
 
-        this.#turnsLeft = this.n_connections - 1;
+        this.#roundsLeft = this.n_connections - 1;
         this.#phase = 'writing';
+
+        this.#lies = [];
 
         const factGroupIs = new Set();
         while (factGroupIs.size < this.n_connections)
             factGroupIs.add(Math.floor(Math.random() * facts.length));
 
-        this.#factGroups = []
-        for (const factGroupI of factGroupIs)
-            this.#factGroups.push({
-                topic: facts[factGroupI].topic,
-                facts: shuffle([...facts[factGroupI].facts].slice(0, Room.N_FACTS - 1))
-                    .map(fact => ({ fact, writerPlayer: null, reachedPlayers: [] }))
-            })
+        const factGroups = []
+        for (const factGroupI of factGroupIs)factGroups.push({
+            topic: facts[factGroupI].topic,
+            facts: shuffle([...facts[factGroupI].facts].slice(0, Room.N_FACTS - 1))
+                .map(fact => ({ fact, writerPlayer: null, reachedPlayers: [] }))
+        })
 
-        this.#lies = [];
+        const latinSquare = randomLatinSquare(this.n_connections);
+        this.#roundFactGroups = latinSquare.map(row => row.map(i => factGroups[i]));
 
-        this.#orderedPlayers = shuffle(Object.values(this.#connections));
-        Object.values(this.#orderedPlayers).forEach((conn, i) => conn.newPhase(this.getFactGroup(i)));
+        Object.values(this.#connections).forEach((conn, i) => conn.newPhase(this.#roundFactGroups[this.#roundsLeft][i]));
         this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
-
     }
 
     goNextPhase() {
@@ -128,8 +127,8 @@ export default class Room {
 
         // end phase
 
-        Object.values(this.#orderedPlayers).forEach((conn, i) => {
-            const factGroup = this.getFactGroup(i).facts;
+        Object.values(this.#connections).forEach((conn, i) => {
+            const factGroup = this.#roundFactGroups[this.#roundsLeft][i].facts;
 
             if (this.#phase === 'writing') {
                 let writtenLie = conn.writtenLie.trim();
@@ -162,18 +161,18 @@ export default class Room {
 
         if (this.#phase === 'writing') {
             this.#phase = 'picking';
-            this.#turnsLeft--;
+            this.#roundsLeft--;
 
         } else if (this.#phase === 'picking') {
             this.#phase = 'writing';
 
         } else console.error({ 'INVALID PHASE': { phase: this.#phase } });
 
-        if (this.#turnsLeft <= 0 && this.#phase !== 'picking') {
-            this.#factGroups.forEach(factGroup => factGroup.facts.forEach(factObj => 
+        if (this.#roundsLeft <= 0 && this.#phase !== 'picking') {
+            this.#roundFactGroups[0].forEach(factGroup => factGroup.facts.forEach(factObj => 
                 factObj.writerPlayer && this.#lies.push(factObj)));
 
-            const scoreObjs = Object.fromEntries(this.#orderedPlayers.map(conn => 
+            const scoreObjs = Object.fromEntries(Object.values(this.#connections).map(conn => 
                 [ conn.id, { score: conn.score, liesReachedPlayers: [] } ]));
 
             for (const lie of this.#lies) 
@@ -181,7 +180,8 @@ export default class Room {
 
             this.#socketRoom.emit('game-end', { scoreObjs });
         } else {
-            Object.values(this.#orderedPlayers).forEach((conn, i) => conn.newPhase(this.getFactGroup(i)));
+            Object.values(this.#connections).forEach((conn, i) => 
+                conn.newPhase(this.#roundFactGroups[this.#roundsLeft][i]));
 
             this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
         }
@@ -198,10 +198,8 @@ export default class Room {
         setTimeout(() => { this.goNextPhase() }, Room.PHASE_END_GRACE_PERIOD)
     }
 
-    getFactGroup(playerI) { let a = (playerI + this.#turnsLeft) % this.#factGroups.length; return this.#factGroups[a]; }
-
     getPhaseLength() {
-        if (this.#phase === 'writing') return this.#turnsLeft === this.n_connections - 1 ? 60 * 1000 : 30 * 1000;
+        if (this.#phase === 'writing') return this.#roundsLeft === this.n_connections - 1 ? 60 * 1000 : 30 * 1000;
         if (this.#phase === 'picking') return 30 * 1000;
         console.error({ 'INVALID PHASE': { phase: this.#phase } });
     }
