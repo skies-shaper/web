@@ -18,8 +18,18 @@ export let mouseX = 400
 export let mouseY = 400
 const HOWLER_POS_SCALE = 0.01
 var room_ID = ""
-const publicPath = filename => window.location.pathname + "public/" + filename;
+const publicPath = filename => "../public/mus/" + filename;
 
+const bgm_one = new Howl({
+    src: [publicPath('Web of Lies.mp3')],
+    volume: 0.75,
+    loop: true,
+
+})
+
+function start_audio() {
+    bgm_one.play()
+}
 let res
 const TPS = 30
 const TIME_PER_TICK = 1000 / TPS
@@ -109,7 +119,7 @@ function mainmenu() {
     // 355,270 > 450,300
     if (server_join_res !== null) {
 
-        console.log(server_join_res)
+        // console.log(server_join_res)
 
         if (server_join_res.err) {
             errormsg = {
@@ -121,6 +131,7 @@ function mainmenu() {
 
         } else {
             game_state = 1
+            start_audio()
             // room_ID = server_join_res.room_ID
 
         }
@@ -286,7 +297,9 @@ async function joinscreen() {
             addTextButton("Begin Game", js_leftmargin, 435, () => {
                 Network.beginGame()
                 loadingscreenSubText = "Joining Game"
-                game_state = 4
+
+
+
             })
         } else {
             canvas.fillStyle = "grey"
@@ -311,6 +324,7 @@ function hostscreen() {
 
     setFont("60px")
     addTextButton("Begin game", -100, 300, () => {
+        start_audio()
         game_state = 1
         is_host = true
     })
@@ -632,7 +646,7 @@ window.addEventListener("keydown", (e) => {
         else
             typed.push(e.key)
     }
-    if ((curr_textinput == 2) && e.key.match(/((backspace)|[A-Za-z0-9\.'"!, ])/)) {
+    if ((curr_textinput == 2) && e.key.match(/((backspace)|[A-Za-z0-9\.'":!, ])/)) {
         typed.push(e.key)
     }
 })
