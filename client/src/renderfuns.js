@@ -103,7 +103,6 @@ export function drawImage(x, y, w, h, src) {
         if (!imgs[src]) {
             imgs[src] = new Image()
             imgs[src].src = "../public/img/" + src
-            console.log(imgs[src])
         }
         canvas.drawImage(imgs[src], Math.floor(x * gameConsts.scale), Math.floor(y * gameConsts.scale), Math.ceil(w * gameConsts.scale), Math.ceil(h * gameConsts.scale))
     }

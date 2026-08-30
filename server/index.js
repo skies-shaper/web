@@ -8,7 +8,7 @@ import { Server as SocketIOServer } from "socket.io";
 import Room from './Room.js'
 
 class Server {
-    #HOSTNAME = process.env.PORT ? "0.0.0.0" : "127.0.0.1"; get HOSTNAME() { return this.#HOSTNAME; }
+    #HOSTNAME = process.env.PORT ? "0.0.0.0" : "0.0.0.0"; get HOSTNAME() { return this.#HOSTNAME; }
     #PORT = process.env.PORT ?? 3333; get PORT() { return this.#PORT; }
 
     #CLIENT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "client");

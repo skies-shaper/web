@@ -47,8 +47,7 @@ export default class Connection {
 
         this.#socket.on('update-avatar', avatar => {
             if (!Number.isInteger(avatar)) return;
-
-            this.#avatar = Math.max(0, Math.min(2, avatar));
+            this.#avatar = avatar
             console.info({ "USER UPDATE AVATAR": { id: this.id, avatar: this.#avatar } });
 
             this.#room.emitPlayersList();

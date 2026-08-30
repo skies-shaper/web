@@ -27,7 +27,17 @@ let ticks = 0
 // // setFont("20px Lacquer")
 // console.log(canvas.measureText("Cover up all of the ").width / gameConsts.scale)
 
+function preload() {
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 40; j++) {
+            drawImage(0, 0, 10, 10, `avatar/${i}/frame_${String(j).padStart(2, "0")}_delay-0.1s.png`)
+        }
+    }
 
+
+}
+
+preload()
 setInterval(() => {
     try { _gameLoop() } catch (e) { }
 }, (1000 / 60))
@@ -50,7 +60,10 @@ var game_states = {
 }
 var game_state = 0
 console.log(game_state)
+
 function _gameLoop() {
+    canvas.imageSmoothingEnabled = false
+    num_avatars_drawn = 0
     canvas.fillStyle = "black"
     fillRect(0, 0, 1000, 1000)
 
@@ -168,8 +181,7 @@ var editing_name = false;
 var name = "player123456890"
 var prevname = ""
 let avatars = [
-    { "name": "bob", "src": "" },
-    { "name": "jooooooooooooooooe", "src": "" }
+
 ]
 let player_avatar = 0
 let players_list = [{ name: "a", avatar: 0 }, { name: "b", avatar: 0 }, { name: "c", avatar: 0 }, { name: "d", avatar: 0 }, { name: "e", avatar: 0 }, { name: "f", avatar: 0 }]
@@ -196,6 +208,7 @@ async function joinscreen() {
 
     setFont("30px")
     for (let i = 0; i < players_list.length; i++) {
+        draw_profilePic(js_leftmargin - 10, 65 + (i * 34), 30, players_list[i].avatar)
         drawText(players_list[i].username + ((players_list[i].isHost) ? " (Host)" : ""), js_leftmargin + 30, 90 + (i * 34))
     }
 
@@ -224,21 +237,33 @@ async function joinscreen() {
     })
 
     // draw avatar images in a like circle frame etc up here once complete. probably store all in a specific folder that is auto-filled 
+    draw_profilePic(600 - 50 - 80, 200 - 30, 60, (player_avatar - 1 + max_num_avatars) % max_num_avatars)
+    draw_profilePic(600 - 50, 200 - 50, 100, player_avatar)
+    draw_profilePic(600 + 50 + 20, 200 - 30, 60, (player_avatar + 1) % max_num_avatars)
+    canvas.filter = "opacity(50%)"
+    canvas.fillStyle = "black"
+    fillRect(600 - 50 - 80, 200 - 30, 60, 60)
+    fillRect(600 + 50 + 20, 200 - 30, 60, 60)
+    canvas.fillStyle = "white"
 
-    let tText = "Avatar: " + avatars[player_avatar].name
+    canvas.filter = "none"
+    let tText = "Avatar: " + avatar_bases[Math.floor(player_avatar / avatar_hats.length)] + " with " + avatar_hats[Math.floor(player_avatar % avatar_hats.length)]
+    setFont("15px")
     drawText(tText, 600 - (canvas.measureText(tText).width / gameConsts.scale / 2), 300)
+    setFont("25px")
+
     addTextButton("prev", 430, 325, () => {
-        // increment player's stored avatar ID by 1 % avatars.length
+        // increment player's stored avatar ID by 1 % max_num_avatars
         player_avatar++
-        player_avatar %= avatars.length
+        player_avatar %= max_num_avatars
         Network.set_server_avatarID(player_avatar)
     })
     addTextButton("next", 700, 325, () => {
         player_avatar--
-        player_avatar += avatars.length
-        player_avatar %= avatars.length
+        player_avatar += max_num_avatars
+        player_avatar %= max_num_avatars
         Network.set_server_avatarID(player_avatar)
-        // decrement player's stored avatar ID by 1 % avatars.length
+        // decrement player's stored avatar ID by 1 % max_num_avatars
     })
 
     // name editor
@@ -316,7 +341,8 @@ var numsubmittedresponses = 0
 //  3 bases and X hats
 //  avatarID 1 -> 1 / (NUM_HATS) = 0 -> base 0, hat 1
 //  avatarID (NUM_HATS) + 1 / NUM_HATS = 1 > base 1, hat 1
-
+let round_prog_timer = {}
+let round_prog_timer_secs = 0
 Network.socket.on("facts", ({ facts, phase, topic }) => {
     console.log(facts)
     console.log(topic)
@@ -324,16 +350,21 @@ Network.socket.on("facts", ({ facts, phase, topic }) => {
 
     topicdata.factList = facts
     topicdata.topic = topic
+    clearInterval(round_prog_timer)
     if (phase == "writing") {
         game_state = 6
         typed = []
         numsubmittedresponses = 0
+        round_prog_timer_secs = 30
+        round_prog_timer = setInterval(() => { round_prog_timer_secs -= 1 }, 1000)
     }
     if (phase == "picking") {
         guess_options = facts
         typed = []
         game_state = 7
         numsubmittedresponses = 0
+        round_prog_timer_secs = 30
+        round_prog_timer = setInterval(() => { round_prog_timer_secs -= 1 }, 1000)
     }
 
 })
@@ -364,7 +395,7 @@ function lyingscreen() {
         console.log("submit lie!!!")
         Network.submit_lie(textinput_str)
     })
-    drawText(numsubmittedresponses + "/" + players_list.length + " responses received", 100, 300)
+    drawText(numsubmittedresponses + "/" + players_list.length + " responses received, " + round_prog_timer_secs + " seconds remain.", 100, 300)
 }
 var guess_options = ["cheese is awesome", "cheese is cool", "cheese tastes good", "cheesesesesese", "OBVIOUSLY UNTRUE"] // to be filled in the loading screen!
 var guess_choice = 0
@@ -392,7 +423,7 @@ function guessscreen() {
 
     drawText("Your choice:", 25, 300)
     drawText("\"" + guess_options[guess_choice] + "\" is the lie", 25, 320)
-    drawText(numsubmittedresponses + "/" + players_list.length + " responses received. " + time_remaining + " seconds left", 25, 350)
+    drawText(numsubmittedresponses + "/" + players_list.length + " responses received. " + round_prog_timer_secs + " seconds left", 25, 350)
 }
 
 function findscreen() { }
@@ -401,9 +432,9 @@ function findscreen() { }
 let scoreobj = [
     { name: "Gallant Gecko", profile: 0, connections: [[0, 1], [0, 4, 2]], score: 1 + 1 + 2 },
     { name: "Ornery Octopus", profile: 2, connections: [], score: 0 },
-    { name: "Evil Edamame", profile: 1, connections: [[2, 0], [2, 3]], score: 1 + 1 },
-    { name: "Adventurous Apple", profile: 2, connections: [[3, 1]], score: 1 },
-    { name: "Cheerful Cheetah", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 1 + 2 + 3 + 4 },
+    // { name: "Evil Edamame", profile: 1, connections: [[2, 0], [2, 3]], score: 1 + 1 },
+    // { name: "Adventurous Apple", profile: 2, connections: [[3, 1]], score: 1 },
+    // { name: "Cheerful Cheetah", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 1 + 2 + 3 + 4 },
     // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
     // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
     // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
@@ -527,16 +558,41 @@ function scorescreen() {
     // animate webbing going back and forth around circle
     // animate up the score list
 }
+
+let avatar_bases = [
+    "bald-person",
+    "ribbon-person",
+    "moustache-person"
+]
+let avatar_hats = [
+    "no hat",
+    "cowboy cat",
+    "top hat",
+    "bowler hat",
+    "dunce cap",
+    "University of Illinois block I logo (R)",
+    "Gamebuilders hat"
+]
+let max_num_avatars = avatar_bases.length * avatar_hats.length;
+let num_avatars_drawn = 0
 function draw_profilePic(x, y, size, id) {
+
+    let avatar_base_num = Math.floor(id / avatar_hats.length)
+    let avatar_hat_num = Math.floor(id % avatar_hats.length)
+
     canvas.save()
     canvas.beginPath()
     canvas.ellipse((x + (size / 2)) * gameConsts.scale, (y + (size / 2)) * gameConsts.scale, (size / 2) * gameConsts.scale, (size / 2) * gameConsts.scale, Math.PI, 0, Math.PI * 2)
+
     canvas.closePath()
     canvas.clip("nonzero")
-    drawImage(x, y, size, size, `avatar/${id}.png`)
+    drawImage(x, y, size, size, `curtains.png`)
+
+    drawImage(x, y + (size / 16 * 3), size, size, `avatar/${avatar_base_num}/frame_${String(Math.floor((ticks / 6) + Math.abs(100 * Math.sin(num_avatars_drawn * 3))) % 40).padStart(2, "0")}_delay-0.1s.png`)
+    drawImage(x + (size / 4), y + (size / 8), size / 2, size / 2, `avatar-hat/${avatar_hat_num}.png`)
     canvas.closePath()
     canvas.restore()
-
+    num_avatars_drawn++
 }
 var typed = []
 window.addEventListener("keydown", (e) => {

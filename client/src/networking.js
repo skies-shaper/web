@@ -14,6 +14,7 @@ export async function emitWithTimeoutAck(...args) {
 
 
 export async function set_server_avatarID(id) {
+    console.log(id)
     socket.emit("update-avatar", id)
 }
 
