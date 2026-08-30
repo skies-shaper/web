@@ -133,6 +133,8 @@ export default class Room {
 
             } else if (this.#phase === 'picking') {
                 let pickedLieI = conn.pickedLieI ?? Math.floor(Math.random() * Room.N_FACTS);
+                pickedLieI = Math.max(0, Math.min(Room.N_FACTS, pickedLieI));
+
                 factGroup.splice(pickedLieI, 1);
 
                 for (const factObj of factGroup) {

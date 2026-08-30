@@ -67,8 +67,7 @@ export default class Connection {
 
         this.#socket.on('lie-pick', choice => {
             if (!Number.isInteger(choice)) return;
-
-            this.#pickedLieI = Math.max(0, Math.min(2, choice));
+            this.#pickedLieI = choice;
         });
 
         this.#socket.on('submit-turn', () => {
