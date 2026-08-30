@@ -421,7 +421,7 @@ function lyingscreen() {
         drawText("· " + topicdata.factList[i], 25, 120 + i * 20)
     }
     setFont("30px")
-    centerText("Now write a magnificent mendacity about " + topicdata.topic + "!", 200)
+    centerText("Now write a magnificent mendacity about " + topicdata.topic + "!", 210)
     setFont("20px")
     drawText(textinput_str, 25, 230)
 
