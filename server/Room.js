@@ -108,7 +108,7 @@ export default class Room {
 
         this.#factGroups = []
         for (const factGroupI of factGroupIs)
-            this.#factGroups.push(shuffle([ ...facts[i]].slice(Room.N_FACTS - 1))
+            this.#factGroups.push(shuffle([ ...facts[factGroupI]].slice(Room.N_FACTS - 1))
                 .map(fact => ({ fact, writerPlayer: null, survivedRounds: 0 })));
         
         this.#orderedPlayers = shuffle(Object.values(this.#connections));
