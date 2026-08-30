@@ -17,7 +17,7 @@ export const ADJECTIVES = {
     P: ["Pugnacious", "Patient", "Pedantic"],
     Q: ["Queer", "Quirky", "Quick"],
     R: ["Ravenous", "Resilient", "Rustic"],
-    S: ["Swift", "Scintillating", "Stolid"],
+    S: ["Swift", "Scheming", "Stolid"],
     T: ["Taciturn", "Tenacious", "Transcendent"],
     U: ["Utter", "Unsafe", "Ungainly"],
     V: ["Vibrant", "Vague", "Volatile"],

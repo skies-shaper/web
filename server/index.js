@@ -91,7 +91,7 @@ class Server {
         description = description ?? "";
 
         const room = new Room(this, id, description)
-        console.log({ "ROOM CREATED": { id, description } })
+        console.info({ "ROOM CREATED": { id, description } })
 
         this.#rooms[id] = room;
 

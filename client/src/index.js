@@ -341,12 +341,6 @@ Network.socket.on("num-submitted-guesses", (num) => {
     numsubmittedresponses = num
 })
 
-Network.socket.on("game-end", ({ scores }) => {
-    console.log(scores)
-    scoreobj = scores
-    game_state = 8
-})
-
 function lyingscreen() {
 
     curr_textinput = 2
@@ -416,6 +410,28 @@ let scoreobj = [
     // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
     // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
 ]
+
+Network.socket.on("game-end", ({ scoreObjs }) => {
+    console.log(scoreObjs)
+
+    scoreobj = Object.entries(scoreObjs).map(([id, obj]) => {
+        const player = players_list.find(p => p.id == id);
+
+        return {
+            score: obj.score,
+            name: player.username, 
+            profile: player.avatar,
+
+            connections: obj.liesReachedPlayers
+                .map(lie => [id, ...lie])
+                .map(lie => lie.map(playerId => players_list.findIndex(p => p.id == playerId))), 
+        }
+    })
+
+    console.log(scoreobj);
+
+    game_state = 8
+})
 
 var sorted_playerlist = scoreobj.sort((a, b) => b.score - a.score)
 console.log(sorted_playerlist)

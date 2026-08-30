@@ -20,6 +20,7 @@ export default class Room {
     #turnsLeft = null;
     #factGroups = null;
     #orderedPlayers = null;
+    #lies = [];
 
     #emptyTimeout = null;
     #nextPhaseTimeout = null;
@@ -110,12 +111,16 @@ export default class Room {
         for (const factGroupI of factGroupIs)
             this.#factGroups.push({
                 topic: facts[factGroupI].topic,
-                facts: shuffle([...facts[factGroupI].facts].slice(0, Room.N_FACTS - 1)).map(fact => ({ fact, writerPlayer: null, survivedRounds: 0 }))
+                facts: shuffle([...facts[factGroupI].facts].slice(0, Room.N_FACTS - 1))
+                    .map(fact => ({ fact, writerPlayer: null, reachedPlayers: [] }))
             })
+
+        this.#lies = [];
 
         this.#orderedPlayers = shuffle(Object.values(this.#connections));
         Object.values(this.#orderedPlayers).forEach((conn, i) => conn.newPhase(this.getFactGroup(i)));
-        // this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
+        this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
+
     }
 
     goNextPhase() {
@@ -130,20 +135,24 @@ export default class Room {
                 let writtenLie = conn.writtenLie.trim();
                 if (writtenLie.length === 0) writtenLie = "*empty*";
 
-                const factObj = { fact: writtenLie, writerPlayer: conn, survivedRounds: 0 }
+                const factObj = { fact: writtenLie, writerPlayer: conn, reachedPlayers: [ ] }
 
                 const insertI = Math.floor(Math.random() * Room.N_FACTS)
                 factGroup.splice(insertI, 0, factObj);
 
             } else if (this.#phase === 'picking') {
+                for (const factObj of factGroup)
+                    factObj.reachedPlayers.push(conn.id);
+
                 let pickedLieI = conn.pickedLieI ?? Math.floor(Math.random() * Room.N_FACTS);
                 pickedLieI = Math.max(0, Math.min(Room.N_FACTS, pickedLieI));
 
+                if (factGroup[pickedLieI].writerPlayer) this.#lies.push(factGroup[pickedLieI]);
                 factGroup.splice(pickedLieI, 1);
 
                 for (const factObj of factGroup) {
-                    factObj.survivedRounds++;
-                    factObj.writerPlayer?.awardLiePoints(factObj.survivedRounds);
+                    if (!factObj.writerPlayer) continue;
+                    factObj.writerPlayer.awardLiePoints(factObj.reachedPlayers.length);
                 }
 
             } else console.error({ 'INVALID PHASE': { phase: this.#phase } });
@@ -161,21 +170,26 @@ export default class Room {
         } else console.error({ 'INVALID PHASE': { phase: this.#phase } });
 
         if (this.#turnsLeft <= 0 && this.#phase !== 'picking') {
-            const scores = Object.fromEntries(this.#orderedPlayers.map(conn => [conn.id, conn.score]));
-            this.#socketRoom.emit('game-end', { scores });
-        } else {
+            this.#factGroups.forEach(factGroup => factGroup.facts.forEach(factObj => 
+                factObj.writerPlayer && this.#lies.push(factObj)));
 
-            console.log(this.#phase)
+            const scoreObjs = Object.fromEntries(this.#orderedPlayers.map(conn => 
+                [ conn.id, { score: conn.score, liesReachedPlayers: [] } ]));
+
+            for (const lie of this.#lies) 
+                scoreObjs[lie.writerPlayer.id].liesReachedPlayers.push(lie.reachedPlayers);
+
+            this.#socketRoom.emit('game-end', { scoreObjs });
+        } else {
             Object.values(this.#orderedPlayers).forEach((conn, i) => conn.newPhase(this.getFactGroup(i)));
 
-            // this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
+            this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
         }
     }
 
     goNextPhaseIfEveryoneSubmitted() {
         this.#socketRoom.emit("num-submitted-guesses", Object.values(this.#connections).filter(conn => conn.turnSubmitted).length)
         if (!Object.values(this.#connections).every(conn => conn.turnSubmitted)) return;
-        console.log("go next phaseee")
         this.goNextPhase();
     }
 

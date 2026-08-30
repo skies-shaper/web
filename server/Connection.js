@@ -56,6 +56,7 @@ export default class Connection {
 
         this.#socket.on('start-game', () => {
             if (this.id !== this.#room.host) return;
+            if (this.#room.n_connections < 2) return;
             this.#room.startGame();
         });
 
@@ -88,7 +89,8 @@ export default class Connection {
     }
 
     awardLiePoints(survivedRounds) {
-        this.#score += survivedRounds;
+        // this.#score += survivedRounds;
+        this.#score += 1;
     }
 
     destroy() {
