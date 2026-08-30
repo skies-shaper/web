@@ -30,12 +30,7 @@ let ticks = 0
 
 setInterval(() => {
     try { _gameLoop() } catch (e) { }
-
-
 }, (1000 / 60))
-
-
-
 
 gameScreenCvs.addEventListener("mousemove", (event) => {
     mouseX = event.offsetX / gameConsts.scale * window.devicePixelRatio
@@ -50,9 +45,10 @@ var game_states = {
     4: loadingscreen, // screen for loading; create a POST_LOAD variable and a LOAD_TEXT variable to store what it says and what happens next
     5: aboutscreen, // screen that shows the about stuff
     6: lyingscreen,
-    7: guessscreen
+    7: guessscreen,
+    8: scorescreen,
 }
-var game_state = 7
+var game_state = 8
 console.log(game_state)
 function _gameLoop() {
     canvas.fillStyle = "black"
@@ -357,6 +353,126 @@ function guessscreen() {
 }
 
 function findscreen() { }
+
+// scoreobj can be sent with player scores in any order. will be sorted into sorted_playerlist.
+let scoreobj = [
+    { name: "Gallant Gecko", profile: 0, connections: [[0, 1], [0, 4, 2]], score: 1 + 1 + 2 },
+    { name: "Ornery Octopus", profile: 2, connections: [], score: 0 },
+    { name: "Evil Edamame", profile: 1, connections: [[2, 0], [2, 3]], score: 1 + 1 },
+    { name: "Adventurous Apple", profile: 2, connections: [[3, 1]], score: 1 },
+    { name: "Cheerful Cheetah", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 1 + 2 + 3 + 4 },
+    // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
+    // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
+    // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
+    // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
+    // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
+]
+var sorted_playerlist = scoreobj.sort((a, b) => b.score - a.score)
+console.log(sorted_playerlist)
+var anglemod = 0
+var angleacc = 0.1
+var web_ticks = 0
+var alphamod = 0
+function scorescreen() {
+    var len = sorted_playerlist.length
+    var f_base = (Math.PI / (len / 2))
+    anglemod += angleacc
+    angleacc -= 0.002
+    angleacc = Math.max(angleacc, 0)
+    if (anglemod > 2 * Math.PI) {
+        anglemod = 2 * Math.PI
+    }
+    alphamod++
+    let prof_pic_size = 60 - (len * 3)
+    for (let i = 0; i < len; i++) {
+        draw_profilePic(200 + (100 * Math.cos(f_base * i + anglemod)), 200 + (100 * Math.sin(f_base * i + anglemod)), prof_pic_size, sorted_playerlist[i].profile)
+        canvas.fillStyle = "black"
+
+
+        canvas.strokeStyle = "white"
+        canvas.lineWidth = 2 * gameConsts.scale
+        canvas.beginPath()
+        canvas.ellipse((200 + prof_pic_size / 2 + (100 * Math.cos(f_base * i + anglemod))) * gameConsts.scale, (200 + prof_pic_size / 2 + (100 * Math.sin(f_base * i + anglemod))) * gameConsts.scale, (prof_pic_size / 2 + 3) * gameConsts.scale, (prof_pic_size / 2 + 3) * gameConsts.scale, Math.PI, 0, Math.PI * 2)
+
+        canvas.closePath()
+        canvas.stroke()
+        canvas.filter = `opacity(${100 - Math.min(100, alphamod + ((len - i) / len) * 50)}%)`
+        canvas.fill()
+
+
+        canvas.filter = "none"
+    }
+    canvas.filter = `opacity(${Math.min(100, alphamod)}%)`
+    canvas.fillStyle = "white"
+    fillRect(399, 50, 2, 385)
+    setFont("60px")
+    drawText("Scoring", 25, 50)
+
+    setFont((prof_pic_size / 2) + "px")
+    for (let i = 0; i < len; i++) {
+
+        draw_profilePic(420, Math.max((prof_pic_size * 4 / 3), (prof_pic_size * 4 / 3) + (-0.5 * alphamod)) + (prof_pic_size + 5) * i + (5 * Math.pow(i, 2 - Math.min(1, alphamod / 50))), prof_pic_size, sorted_playerlist[i].profile)
+
+        drawText(`${sorted_playerlist[i].name} · ${sorted_playerlist[i].score}`, 420 + (1.2 * prof_pic_size), Math.max((prof_pic_size * 2), (prof_pic_size / 3) + 60 + (-0.5 * alphamod)) + (prof_pic_size + 5) * i + (5 * Math.pow(i, 2 - Math.min(1, alphamod / 50))))
+    }
+
+    canvas.filter = "none"
+
+    if (alphamod > 80) {
+        web_ticks++
+        let pos_from_idx = (i) => {
+            return [((200 + prof_pic_size / 2) + ((97 - (prof_pic_size / 2)) * Math.cos(f_base * i + anglemod))) * gameConsts.scale, ((200 + prof_pic_size / 2) + ((97 - (prof_pic_size / 2)) * Math.sin(f_base * i + anglemod))) * gameConsts.scale]
+        }
+        let num_drawn_strokes = 0
+        for (let i = 0; i < len; i++) {
+            let c = sorted_playerlist[i].connections
+            for (let j = 0; j < c.length; j++) {
+                for (let h = 0; h < c[j].length - 1; h++) {
+                    canvas.lineWidth = (2 + Math.sin(num_drawn_strokes)) * gameConsts.scale
+                    canvas.strokeStyle = `hsl(0, 0%, ${(Math.sin(num_drawn_strokes) * 20) + 80}%)`
+
+                    console.log(canvas.strokeStyle)
+                    canvas.beginPath()
+                    canvas.moveTo(pos_from_idx(c[j][h])[0], pos_from_idx(c[j][h])[1])
+                    canvas.lineTo(pos_from_idx(c[j][h + 1])[0], pos_from_idx(c[j][h + 1])[1])
+
+                    if (num_drawn_strokes < (web_ticks / 10)) {
+
+                        canvas.stroke()
+                    } else {
+                        canvas.closePath()
+                    }
+                    num_drawn_strokes++
+                }
+            }
+        }
+
+    }
+    for (let i = 0; i < len; i++) {
+
+        canvas.strokeStyle = "white"
+        canvas.lineWidth = 2 * gameConsts.scale
+        canvas.beginPath()
+        canvas.ellipse((200 + prof_pic_size / 2 + (100 * Math.cos(f_base * i + anglemod))) * gameConsts.scale, (200 + prof_pic_size / 2 + (100 * Math.sin(f_base * i + anglemod))) * gameConsts.scale, (prof_pic_size / 2 + 3) * gameConsts.scale, (prof_pic_size / 2 + 3) * gameConsts.scale, Math.PI, 0, Math.PI * 2)
+
+        canvas.closePath()
+        canvas.stroke()
+    }
+    // animate the web of ppl's avatars going in a circle
+    // animate webbing going back and forth around circle
+    // animate up the score list
+}
+function draw_profilePic(x, y, size, id) {
+    canvas.save()
+    canvas.beginPath()
+    canvas.ellipse((x + (size / 2)) * gameConsts.scale, (y + (size / 2)) * gameConsts.scale, (size / 2) * gameConsts.scale, (size / 2) * gameConsts.scale, Math.PI, 0, Math.PI * 2)
+    canvas.closePath()
+    canvas.clip("nonzero")
+    drawImage(x, y, size, size, `avatar/${id}.png`)
+    canvas.closePath()
+    canvas.restore()
+
+}
 var typed = []
 window.addEventListener("keydown", (e) => {
     if (curr_textinput == 0 && e.key.match(/((backspace)|[ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz23456789])/))
