@@ -60,8 +60,7 @@ export default class Connection {
         });
 
         this.#socket.on('lie-write', lie => {
-            lie = String(username).slice(0, 200);
-
+            lie = String(lie).slice(0, 200);
             this.#writtenLie = lie;
         });
 
@@ -71,7 +70,7 @@ export default class Connection {
         });
 
         this.#socket.on('submit-turn', () => {
-            this.turnSubmitted = true;
+            this.#turnSubmitted = true;
             this.#room.goNextPhaseIfEveryoneSubmitted();
         });
 
@@ -80,12 +79,12 @@ export default class Connection {
         })
     }
 
-    newPhase(factObjs) { 
+    newPhase(factObjs) {
         this.#writtenLie = "";
         this.#pickedLieI = null;
         this.#turnSubmitted = false;
 
-        this.#socket.emit('facts', { facts: factObjs.map(fact => fact.fact), phase: this.#room.phase });
+        this.#socket.emit('facts', { facts: factObjs.facts.map(fact => fact.fact), phase: this.#room.phase, topic: factObjs.topic });
     }
 
     awardLiePoints(survivedRounds) {

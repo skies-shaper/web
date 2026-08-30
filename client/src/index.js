@@ -17,7 +17,7 @@ export let gameConsts = {
 export let mouseX = 400
 export let mouseY = 400
 const HOWLER_POS_SCALE = 0.01
-
+var room_ID = ""
 const publicPath = filename => window.location.pathname + "public/" + filename;
 
 let res
@@ -48,7 +48,7 @@ var game_states = {
     7: guessscreen,
     8: scorescreen,
 }
-var game_state = 8
+var game_state = 0
 console.log(game_state)
 function _gameLoop() {
     canvas.fillStyle = "black"
@@ -68,9 +68,10 @@ var server_join_res = null;
 async function handleHashChange() {
     if (window.location.hash.length != 6) return; // hashtag + 5 char room id 
 
-    const roomId = window.location.hash.substring(1);
-    console.log(roomId);
-    server_join_res = await Network.JoinRoomResult(roomId)
+    room_ID = window.location.hash.substring(1).toUpperCase();
+    console.log(room_ID);
+
+    server_join_res = await Network.JoinRoomResult(room_ID)
 }
 
 window.addEventListener("hashchange", e => handleHashChange());
@@ -100,12 +101,15 @@ function mainmenu() {
         if (server_join_res.err) {
             errormsg = {
                 'INVALID_CODE': "Invalid join code",
-                'TIMED_OUT': "Could not reach server"
+                'TIMED_OUT': "Could not reach server",
+                "ROOM_FULL": "Requested room is full",
+                "GAME_STARTED": "Game already started",
             }[server_join_res.err]
+
         } else {
             game_state = 1
             // room_ID = server_join_res.room_ID
-            room_ID = "ABCDE"
+
         }
     }
     if (!isJoinBtnClicked) {
@@ -149,7 +153,7 @@ function mainmenu() {
         res = await Network.create_room()
 
         if (res.err) { }
-        room_ID = res.roomId;
+        room_ID = res.roomId.toUpperCase();
 
         // join room
         window.location.hash = room_ID;
@@ -169,25 +173,30 @@ let avatars = [
 ]
 let player_avatar = 0
 let players_list = [{ name: "a", avatar: 0 }, { name: "b", avatar: 0 }, { name: "c", avatar: 0 }, { name: "d", avatar: 0 }, { name: "e", avatar: 0 }, { name: "f", avatar: 0 }]
-
-Network.socket.on('players-list', ({ players }) => players_list = players);
+Network.socket.on('players-list', ({ players }) => {
+    players_list = players
+    let player_obj = players.find((a) => a.id == Network.socket.id)
+    name = player_obj.username
+    is_host = player_obj.isHost
+    console.log(player_obj)
+});
 
 async function joinscreen() {
 
     var js_leftmargin = 25
-
+    // console.log(players_list)
     canvas.fillStyle = "white"
     // ability to set name (textbox)
     // list of currently joined players (and if they're the host)
     // note list of returned players must always have the host at index 0.
     setFont("40px")
-    drawText(players_list[0].name + "'s Room -- code " + room_ID, js_leftmargin, 40)
+    drawText(players_list.find((a) => a.isHost).username + "'s Room -- code " + room_ID.toUpperCase(), js_leftmargin, 40)
     setFont("20px")
     drawText(players_list.length + "/ 10 players", js_leftmargin, 60)
 
     setFont("30px")
     for (let i = 0; i < players_list.length; i++) {
-        drawText(players_list[i].name + ((i == 0) ? " (Host)" : ""), js_leftmargin + 30, 90 + (i * 34))
+        drawText(players_list[i].username + ((players_list[i].isHost) ? " (Host)" : ""), js_leftmargin + 30, 90 + (i * 34))
     }
 
     fillRect(399, 50, 2, 385)
@@ -237,22 +246,25 @@ async function joinscreen() {
     //  -> on submit, send to server name
     // avatar editor
     // increment avatar ID + 1 mod total number avatar IDs
-    // 
-
-
 
     // if host, a "begin game" button
     setFont("40px")
     if (is_host) {
-        addTextButton("Begin Game", js_leftmargin, 435, () => {
-            Network.beginGame()
-            loadingscreenSubText = "Joining Game"
-            game_state = 4
-        })
+        if (players_list.length > 1) {
+            addTextButton("Begin Game", js_leftmargin, 435, () => {
+                Network.beginGame()
+                loadingscreenSubText = "Joining Game"
+                game_state = 4
+            })
+        } else {
+            canvas.fillStyle = "grey"
+            drawText("· Begin Game ·", js_leftmargin, 435)
+        }
+
     }
 }
 
-var room_ID = ""
+
 var is_host = false
 function hostscreen() {
     canvas.fillStyle = "white"
@@ -262,7 +274,7 @@ function hostscreen() {
     if (typeof room_ID != "string") {
         centerText("- - - - -", 110)
     } else {
-        centerText(room_ID, 110)
+        centerText(room_ID.toUpperCase(), 110)
     }
 
     setFont("60px")
@@ -300,6 +312,41 @@ function aboutscreen() {
 }
 var topicdata = { topic: "cheese", factList: ["mmm tasty", "contains salt sometimes"] } // WILL BE POPULATED before lyingscreen is called
 var numsubmittedresponses = 0
+
+//  3 bases and X hats
+//  avatarID 1 -> 1 / (NUM_HATS) = 0 -> base 0, hat 1
+//  avatarID (NUM_HATS) + 1 / NUM_HATS = 1 > base 1, hat 1
+
+Network.socket.on("facts", ({ facts, phase, topic }) => {
+    console.log(facts)
+    console.log(topic)
+    console.log(phase)
+
+    topicdata.factList = facts
+    topicdata.topic = topic
+    if (phase == "writing") {
+        game_state = 6
+        typed = []
+        numsubmittedresponses = 0
+    }
+    if (phase == "picking") {
+        guess_options = facts
+        typed = []
+        game_state = 7
+        numsubmittedresponses = 0
+    }
+
+})
+Network.socket.on("num-submitted-guesses", (num) => {
+    numsubmittedresponses = num
+})
+
+Network.socket.on("game-end", ({ scores }) => {
+    console.log(scores)
+    scoreobj = scores
+    game_state = 8
+})
+
 function lyingscreen() {
 
     curr_textinput = 2
@@ -320,6 +367,7 @@ function lyingscreen() {
     drawText(textinput_str, 25, 230)
 
     addTextButton("submit", 25, 300, () => {
+        console.log("submit lie!!!")
         Network.submit_lie(textinput_str)
     })
     drawText(numsubmittedresponses + "/" + players_list.length + " responses received", 100, 300)
@@ -342,6 +390,7 @@ function guessscreen() {
         addTextButton("The Lie", 25, 155 + i * 20, () => {
             guess_choice = i
             console.log(i)
+            Network.guess(i)
         })
         drawText("· " + guess_options[i], 100, 155 + i * 20)
     }
@@ -367,6 +416,7 @@ let scoreobj = [
     // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
     // { name: "test test", profile: 3, connections: [[4, 0, 2, 3, 1]], score: 2 },
 ]
+
 var sorted_playerlist = scoreobj.sort((a, b) => b.score - a.score)
 console.log(sorted_playerlist)
 var anglemod = 0
@@ -431,7 +481,6 @@ function scorescreen() {
                     canvas.lineWidth = (2 + Math.sin(num_drawn_strokes)) * gameConsts.scale
                     canvas.strokeStyle = `hsl(0, 0%, ${(Math.sin(num_drawn_strokes) * 20) + 80}%)`
 
-                    console.log(canvas.strokeStyle)
                     canvas.beginPath()
                     canvas.moveTo(pos_from_idx(c[j][h])[0], pos_from_idx(c[j][h])[1])
                     canvas.lineTo(pos_from_idx(c[j][h + 1])[0], pos_from_idx(c[j][h + 1])[1])
@@ -494,6 +543,9 @@ window.addEventListener("keydown", (e) => {
 // -- lying type in
 // -- enter join code
 // -- writing name
+
+
+
 async function handleTextInput() {
     if (isJoinBtnClicked && game_state == 0) {
 
@@ -550,6 +602,7 @@ async function handleTextInput() {
             typed.pop()
         }
         textinput_str = typed.join("") + ((Math.floor(ticks / 30) % 2 == 0) ? "_" : "")
+        Network.give_lie_text(typed.join(""))
     }
 }
 

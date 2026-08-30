@@ -13,7 +13,9 @@ export async function emitWithTimeoutAck(...args) {
 }
 
 
-export async function set_server_avatarID(id) { }
+export async function set_server_avatarID(id) {
+    socket.emit("update-avatar", id)
+}
 
 
 // creates room. Returns room ID for display purposes
@@ -33,8 +35,8 @@ export async function JoinRoomResult(id) {
 export async function isNameUnique(name) {
     return true
 }
-export async function set_name() { // we let multiple people have the same name. chaos ensues.
-
+export async function set_name(name) { // we let multiple people have the same name. chaos ensues.
+    return emitWithTimeoutAck("update-username", name);
 }
 
 // returns list of objects with {"id" : "ABCDE", "players": 0}
@@ -55,9 +57,12 @@ export async function get_list_of_facts() {
 
 //submits a lie text for the player's grouping of facts
 export async function submit_lie(text) {
-
+    socket.emit("submit-turn")
 }
 
+export async function give_lie_text(text) {
+    socket.emit("lie-write", text)
+}
 
 // returns all of the things the player is able to guess (three things: 2 facts and one lie)
 export async function get_round_guess_options() {
@@ -66,10 +71,12 @@ export async function get_round_guess_options() {
 
 // sends player's guess as num (the `num`th element in the provided array (0, 1, 2))
 export async function guess(num) {
-
+    socket.emit("lie-pick", num)
+    socket.emit("submit-turn")
 }
+
 
 // starts the game in the host's room
 export async function beginGame() {
-
+    socket.emit("start-game")
 }

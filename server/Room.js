@@ -1,11 +1,11 @@
 import Connection from './Connection.js'
 import { shuffle } from './utils.js';
-import { facts } from './facts.json' with { type: 'json' };
-
+import facts_ from './facts.json' with { type: 'json' };
+const facts = facts_.facts
 export default class Room {
-    static get EMPTY_CLOSE_MS() { return 30*1000; }
+    static get EMPTY_CLOSE_MS() { return 30 * 1000; }
     static get PHASE_END_GRACE_PERIOD() { return 1000; }
-    
+
     static get N_FACTS() { return 5; }
 
     #id; get id() { return this.#id; }
@@ -49,7 +49,7 @@ export default class Room {
 
     addPlayer(socket) {
         if (this.#phase !== 'lobby') return { err: 'GAME_STARTED' }
-        if (this.n_connections === 10) return { err: 'ROOM_FULL' } ;
+        if (this.n_connections === 10) return { err: 'ROOM_FULL' };
 
         console.info({ "USER JOINED ROOM": { id: socket.id, room: this.#id } });
 
@@ -66,7 +66,7 @@ export default class Room {
     }
 
     removePlayer(id) {
-        if (!this.#connections.hasOwn(id))
+        if (!Object.hasOwn(this.#connections, id))
             return console.error({ 'ATTEMPTED TO REMOVE NONEXISTENT CONNECTION': { id, room: this.#id } });
 
         this.#connections[id].socket.leave(this.#id);
@@ -86,13 +86,13 @@ export default class Room {
     }
 
     emitPlayersList() {
-        this.#socketRoom.emit('players-list', { 
-            players: Object.values(this.#connections).map(conn => ({ 
+        this.#socketRoom.emit('players-list', {
+            players: Object.values(this.#connections).map(conn => ({
                 id: conn.id,
                 username: conn.username,
                 isHost: conn.id === this.#host,
                 avatar: conn.avatar
-            })) 
+            }))
         });
     }
 
@@ -103,15 +103,19 @@ export default class Room {
         this.#phase = 'writing';
 
         const factGroupIs = new Set();
-        while (factGroupIs.size < this.n_connections) 
+        while (factGroupIs.size < this.n_connections)
             factGroupIs.add(Math.floor(Math.random() * facts.length));
 
         this.#factGroups = []
         for (const factGroupI of factGroupIs)
-            this.#factGroups.push(shuffle([ ...facts[factGroupI]].slice(Room.N_FACTS - 1))
-                .map(fact => ({ fact, writerPlayer: null, survivedRounds: 0 })));
-        
+            this.#factGroups.push({
+                topic: facts[factGroupI].topic,
+                facts: shuffle([...facts[factGroupI].facts].slice(0, Room.N_FACTS - 1)).map(fact => ({ fact, writerPlayer: null, survivedRounds: 0 }))
+            })
+
         this.#orderedPlayers = shuffle(Object.values(this.#connections));
+        Object.values(this.#orderedPlayers).forEach((conn, i) => conn.newPhase(this.getFactGroup(i)));
+        // this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
     }
 
     goNextPhase() {
@@ -120,12 +124,12 @@ export default class Room {
         // end phase
 
         Object.values(this.#orderedPlayers).forEach((conn, i) => {
-            const factGroup = this.getFactGroup(i);
+            const factGroup = this.getFactGroup(i).facts;
 
             if (this.#phase === 'writing') {
                 let writtenLie = conn.writtenLie.trim();
-                if (writtenLie.length === 0) lie = "*empty*";
-                
+                if (writtenLie.length === 0) writtenLie = "*empty*";
+
                 const factObj = { fact: writtenLie, writerPlayer: conn, survivedRounds: 0 }
 
                 const insertI = Math.floor(Math.random() * Room.N_FACTS)
@@ -149,35 +153,42 @@ export default class Room {
 
         if (this.#phase === 'writing') {
             this.#phase = 'picking';
+            this.#turnsLeft--;
+
         } else if (this.#phase === 'picking') {
             this.#phase = 'writing';
-            this.#turnsLeft--;
+
         } else console.error({ 'INVALID PHASE': { phase: this.#phase } });
 
-        if (this.#turnsLeft === 0) {
+        if (this.#turnsLeft <= 0 && this.#phase !== 'picking') {
             const scores = Object.fromEntries(this.#orderedPlayers.map(conn => [conn.id, conn.score]));
             this.#socketRoom.emit('game-end', { scores });
         } else {
+
+            console.log(this.#phase)
             Object.values(this.#orderedPlayers).forEach((conn, i) => conn.newPhase(this.getFactGroup(i)));
-            this.#nextPhaseTimeout = setTimeout(this.endPhase, this.getPhaseLength());
+
+            // this.#nextPhaseTimeout = setTimeout(() => { this.endPhase() }, this.getPhaseLength());
         }
     }
 
     goNextPhaseIfEveryoneSubmitted() {
+        this.#socketRoom.emit("num-submitted-guesses", Object.values(this.#connections).filter(conn => conn.turnSubmitted).length)
         if (!Object.values(this.#connections).every(conn => conn.turnSubmitted)) return;
+        console.log("go next phaseee")
         this.goNextPhase();
     }
 
     endPhase() {
         this.#socketRoom.emit('phase-end');
-        setTimeout(this.goNextPhase, Room.PHASE_END_GRACE_PERIOD)
+        setTimeout(() => { this.goNextPhase() }, Room.PHASE_END_GRACE_PERIOD)
     }
 
-    getFactGroup(playerI) { return this.#factGroups[(playerI + this.#turnsLeft) % this.#factGroups.length]; }
+    getFactGroup(playerI) { let a = (playerI + this.#turnsLeft) % this.#factGroups.length; return this.#factGroups[a]; }
 
-    getPhaseLength() { 
-        if (this.#phase === 'writing') return this.#turnsLeft === this.n_connections - 1? 60*1000 : 30*1000; 
-        if (this.#phase === 'picking') return 30*1000;
+    getPhaseLength() {
+        if (this.#phase === 'writing') return this.#turnsLeft === this.n_connections - 1 ? 60 * 1000 : 30 * 1000;
+        if (this.#phase === 'picking') return 30 * 1000;
         console.error({ 'INVALID PHASE': { phase: this.#phase } });
     }
 

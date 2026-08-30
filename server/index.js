@@ -9,9 +9,9 @@ import Room from './Room.js'
 
 class Server {
     #HOSTNAME = process.env.PORT ? "0.0.0.0" : "127.0.0.1"; get HOSTNAME() { return this.#HOSTNAME; }
-    #PORT = process.env.PORT ?? 8000; get PORT() { return this.#PORT; }
+    #PORT = process.env.PORT ?? 3333; get PORT() { return this.#PORT; }
 
-    #CLIENT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "client"); 
+    #CLIENT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "client");
     get CLIENT_PATH() { return this.#CLIENT_PATH; }
 
     #app;
@@ -19,7 +19,7 @@ class Server {
     #io; get io() { return this.#io; }
 
     #rooms = {};
-    
+
     constructor() {
         this.#app = express();
         this.#server = http.createServer(this.#app);
@@ -36,7 +36,7 @@ class Server {
             this.#handleSocket(socket);
         });
 
-        this.#server.listen(this.PORT,this.HOSTNAME,() => {
+        this.#server.listen(this.PORT, this.HOSTNAME, () => {
             console.info({ "SERVER STARTED": { port: this.PORT, hostname: this.HOSTNAME } });
         });
 
@@ -47,12 +47,12 @@ class Server {
 
     #handleSocket(socket) {
         this.#app.on("get-rooms", (callback) => {
-            callback({ 
-                rooms: Object.values(this.#rooms).map(room => ({ 
-                    id: room.id, 
-                    description: room.description, 
+            callback({
+                rooms: Object.values(this.#rooms).map(room => ({
+                    id: room.id,
+                    description: room.description,
                     n_players: room.n_connections
-                })) 
+                }))
             });
         })
 
@@ -63,11 +63,12 @@ class Server {
         socket.on("join-room", (roomId, callback) => {
             roomId = roomId.toUpperCase();
 
-            if (!Object.hasOwn(this.#rooms, roomId)) 
+            if (!Object.hasOwn(this.#rooms, roomId))
                 return callback({ err: 'INVALID_CODE' });
 
             callback(this.#rooms[roomId].addPlayer(socket));
         });
+
     }
 
     #generateRoomId() {
@@ -80,8 +81,8 @@ class Server {
 
             for (let i = 0; i < 5; i++)
                 id += alphabet[Math.floor(Math.random() * alphabet.length)];
-        } while (Object.hasOwn(id));
-        
+        } while (Object.hasOwn(this.#rooms, id));
+
         return id;
     }
 
@@ -90,7 +91,7 @@ class Server {
         description = description ?? "";
 
         const room = new Room(this, id, description)
-        console.log({ "ROOM CREATED": { id, description }})
+        console.log({ "ROOM CREATED": { id, description } })
 
         this.#rooms[id] = room;
 
@@ -102,5 +103,5 @@ class Server {
         delete this.#rooms[id];
     }
 };
-    
+
 const server = new Server();
