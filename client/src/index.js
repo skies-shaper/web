@@ -21,7 +21,7 @@ var room_ID = ""
 const publicPath = filename => "../public/mus/" + filename;
 
 const bgm_one = new Howl({
-    src: [publicPath('Web of Lies.mp3')],
+    src: [publicPath('webofliesloop.mp3')],
     volume: 0.75,
     loop: true,
 
@@ -343,12 +343,25 @@ function loadingscreen() {
 function aboutscreen() {
     canvas.fillStyle = "white"
     setFont("50px")
+
     centerText("Web of Lies", 40)
+    setFont("20px")
+
+    centerText("The truth is often stranger than fiction. Everyone knows who said that.", 65)
+    centerText("And if you don't, you can confidently lie about it in Web of Lies!", 85)
+    centerText("Come up with a lie that sounds similar in topic and tone to a list of given real facts.", 105)
+    centerText("Fool your friends (who are doing much the same thing) to earn delicious, delicious points!", 125)
+
     setFont("30px")
-    centerText("Programming and Layout - SkiesShaper", 70)
-    centerText("Backend - Me123jm", 100)
-    centerText("Writing - Landalt", 130)
-    centerText("Art - MarieMelody", 160)
+
+    centerText("Programming and Layout - SkiesShaper", 160)
+    centerText("Backend - Me123jm", 190)
+    centerText("Writing - Landalt", 220)
+    centerText("Art - MarieMelody", 250)
+
+    centerText("Special thanks to SkiesShaper's jar of jelly that is not in fact jam", 300)
+
+
 
     addTextButton("Back", -100, 415, async () => {
         console.log("Going to main menu")

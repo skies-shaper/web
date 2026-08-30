@@ -38,7 +38,7 @@ export function addTextButton(text, xpos, ypos, callback, _id) {
     }
     if (mouseInArea(x, y - h, (x + w), (y))) {
         fulltext = "·> " + text + " <·"
-        drawText(fulltext, x - (addonwidth / 2), y)
+        drawText(fulltext, x - (addonwidth / 4), y)
     } else {
         drawText(fulltext, x, y)
 
